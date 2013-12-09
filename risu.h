@@ -26,6 +26,7 @@ extern uintptr_t image_start_address;
 extern void *memblock;
 
 extern int test_fp_exc;
+extern int ismaster;
 
 /* Ops code under test can request from risu: */
 #define OP_COMPARE 0
@@ -58,6 +59,8 @@ int recv_and_compare_register_info(int sock, void *uc);
  * and 1 for a mismatch.
  */
 int report_match_status(void);
+
+void report_test_status(void *pc);
 
 /* Move the PC past this faulting insn by adjusting ucontext
  */
