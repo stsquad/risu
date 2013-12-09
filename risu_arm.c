@@ -44,6 +44,9 @@ void advance_pc(void *vuc)
 {
    ucontext_t *uc = vuc;
    uc->uc_mcontext.arm_pc += insnsize(uc);
+   if (ismaster) {
+      report_test_status((void *) uc->uc_mcontext.arm_pc);
+   }
 }
 
 

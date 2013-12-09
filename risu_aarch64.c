@@ -16,6 +16,9 @@ void advance_pc(void *vuc)
 {
     ucontext_t *uc = vuc;
     uc->uc_mcontext.pc += 4;
+    if (ismaster) {
+      report_test_status((void *) uc->uc_mcontext.pc);
+    }
 }
 
 void set_ucontext_paramreg(void *vuc, uint64_t value)

@@ -37,6 +37,16 @@ sigjmp_buf jmpbuf;
 /* Should we test for FP exception status bits? */
 int test_fp_exc = 0;
 
+long executed_tests = 0;
+void report_test_status(void *pc)
+{
+   executed_tests += 1;
+   if (executed_tests % 100 == 0) {
+      fprintf(stderr,"Executed %ld test instructions (pc=%p)\r",
+              executed_tests, pc);
+   }
+}
+
 void master_sigill(int sig, siginfo_t *si, void *uc)
 {
    switch (recv_and_compare_register_info(master_socket, uc))
@@ -61,6 +71,7 @@ void apprentice_sigill(int sig, siginfo_t *si, void *uc)
          return;
       case 1:
          /* end of test */
+         fprintf(stderr, "\nend of test\n");
          exit(0);
       default:
          /* mismatch */
@@ -129,7 +140,7 @@ int master(int sock)
    }
    master_socket = sock;
    set_sigill_handler(&master_sigill);
-   fprintf(stderr, "starting image\n");
+   fprintf(stderr, "starting master image at 0x%"PRIxPTR"\n", image_start_address);
    image_start();
    fprintf(stderr, "image returned unexpectedly\n");
    exit(1);
@@ -139,7 +150,7 @@ int apprentice(int sock)
 {
    apprentice_socket = sock;
    set_sigill_handler(&apprentice_sigill);
-   fprintf(stderr, "starting image\n");
+   fprintf(stderr, "starting apprentice image at 0x%"PRIxPTR"\n", image_start_address);
    image_start();
    fprintf(stderr, "image returned unexpectedly\n");
    exit(1);
