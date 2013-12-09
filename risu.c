@@ -124,6 +124,8 @@ int master(int sock)
     }
     master_socket = sock;
     set_sigill_handler(&master_sigill);
+    fprintf(stderr, "starting master image at 0x%"PRIxPTR"\n",
+            image_start_address);
     fprintf(stderr, "starting image\n");
     image_start();
     fprintf(stderr, "image returned unexpectedly\n");
@@ -134,6 +136,8 @@ int apprentice(int sock)
 {
     apprentice_socket = sock;
     set_sigill_handler(&apprentice_sigill);
+    fprintf(stderr, "starting apprentice image at 0x%"PRIxPTR"\n",
+            image_start_address);
     fprintf(stderr, "starting image\n");
     image_start();
     fprintf(stderr, "image returned unexpectedly\n");
