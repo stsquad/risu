@@ -36,6 +36,13 @@ $(PROG): $(OBJS)
 %.risu.asm: %.risu.bin
 	${OBJDUMP} -b binary -m $(ARCH) -D $^ > $@
 
+# hand-coded tests
+%.risu.bin: %.risu.elf
+	$(OBJCOPY) -O binary $< $@
+
+%.risu.elf: %.risu.S
+	${AS} -o $@ $^
+
 %.o: %.c $(HDRS)
 	$(CC) $(CPPFLAGS) $(CFLAGS) -o $@ -c $<
 
