@@ -61,6 +61,18 @@ int send_register_info(int sock, void *uc);
  */
 int recv_and_compare_register_info(int sock, void *uc);
 
+/* To keep the read/write logic from multiplying across all arches
+ * we wrap up the function here to keep all the changes in one place
+ */
+typedef int (*trace_write_fn) (void *ptr, size_t bytes);
+typedef int (*trace_read_fn) (void *ptr, size_t bytes);
+
+/* Write out to trace file */
+int write_to_tracefile(trace_write_fn write_fn, void *uc);
+
+/* Read from trace file and check */
+int read_tracefile_and_check(trace_read_fn read_fn, void * uc);
+
 /* Print a useful report on the status of the last comparison
  * done in recv_and_compare_register_info(). This is called on
  * exit, so need not restrict itself to signal-safe functions.
