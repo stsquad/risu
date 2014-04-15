@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <ucontext.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "risu.h"
 #include "risu_reginfo_aarch64.h"
@@ -28,9 +29,7 @@ void advance_pc(void *vuc)
 {
     ucontext_t *uc = vuc;
     uc->uc_mcontext.pc += 4;
-    if (ismaster) {
-      report_test_status((void *) uc->uc_mcontext.pc);
-    }
+    report_test_status((void *) uc->uc_mcontext.pc);
 }
 
 static void set_x0(void *vuc, uint64_t x0)
@@ -133,6 +132,91 @@ int recv_and_compare_register_info(int sock, void *uc)
    }
 
     return resp;
+}
+
+int write_to_tracefile(trace_write_fn write_fn, void *uc)
+{
+   int resp = 0, op;
+   trace_header_t header;
+
+   reginfo_init(&master_ri, uc);
+   op = get_risuop(master_ri.faulting_insn);
+   header.pc = master_ri.pc;
+   header.risu_op = op;
+   write_fn(&header, sizeof(header));
+
+   switch (op) {
+      case OP_TESTEND:
+         resp = 1;
+      case OP_COMPARE:
+      default:
+         write_fn(&master_ri, sizeof(master_ri));
+         break;
+      case OP_SETMEMBLOCK:
+         memblock = (void *)master_ri.regs[0];
+         break;
+      case OP_GETMEMBLOCK:
+         set_x0(uc, master_ri.regs[0] + (uintptr_t)memblock);
+         break;
+      case OP_COMPAREMEM:
+         write_fn(memblock, MEMBLOCKLEN);
+         break;
+   }
+
+   return resp;
+}
+
+
+int read_tracefile_and_check(trace_read_fn read_fn, void * uc)
+{
+   int resp = 0, op;
+   trace_header_t header;
+
+   reginfo_init(&master_ri, uc);
+   op = get_risuop(master_ri.faulting_insn);
+
+   read_fn(&header, sizeof(header));
+   if ( header.pc == master_ri.pc &&
+        header.risu_op == op )
+   {
+      switch (op) {
+         case OP_COMPARE:
+         case OP_TESTEND:
+         default:
+            if (!read_fn(&apprentice_ri, sizeof(apprentice_ri))) {
+               packet_mismatch = 1;
+               resp = 2;
+            } else if (!reginfo_is_eq(&master_ri, &apprentice_ri)) {
+               /* register mismatch */
+               resp = 2;
+            } else if (op == OP_TESTEND) {
+               resp = 1;
+            }
+            break;
+         case OP_SETMEMBLOCK:
+            memblock = (void *)master_ri.regs[0];
+            break;
+         case OP_GETMEMBLOCK:
+            set_x0(uc, master_ri.regs[0] + (uintptr_t)memblock);
+            break;
+         case OP_COMPAREMEM:
+            mem_used = 1;
+            if (!read_fn(apprentice_memblock, MEMBLOCKLEN)) {
+               packet_mismatch = 1;
+               resp = 2;
+            } else if (memcmp(memblock, apprentice_memblock, MEMBLOCKLEN) != 0) {
+               /* memory mismatch */
+               resp = 2;
+            }
+            break;
+      }
+   } else {
+      fprintf(stderr, "out of sync %lx/%lx %d/%d\n",
+              master_ri.pc, header.pc,
+              op, header.risu_op);
+      resp = 2;
+   }
+   return resp;
 }
 
 /* Print a useful report on the status of the last comparison

@@ -31,6 +31,7 @@
 void *memblock = 0;
 
 int apprentice_socket, master_socket;
+int trace_file = 0;
 
 sigjmp_buf jmpbuf;
 
@@ -40,31 +41,57 @@ int test_fp_exc = 0;
 long executed_tests = 0;
 void report_test_status(void *pc)
 {
-   executed_tests += 1;
-   if (executed_tests % 100 == 0) {
-      fprintf(stderr,"Executed %ld test instructions (pc=%p)\r",
-              executed_tests, pc);
+   if (ismaster || trace_file) {
+      executed_tests += 1;
+      if (executed_tests % 100 == 0) {
+         fprintf(stderr,"Executed %ld test instructions (pc=%p)\r",
+                 executed_tests, pc);
+      }
    }
+}
+
+int write_trace(void *ptr, size_t bytes)
+{
+   size_t res = write(trace_file, ptr, bytes);
+   return res == bytes;
+}
+
+int read_trace(void *ptr, size_t bytes)
+{
+   size_t res = read(trace_file, ptr, bytes);
+   return res == bytes;
 }
 
 void master_sigill(int sig, siginfo_t *si, void *uc)
 {
-   switch (recv_and_compare_register_info(master_socket, uc))
-   {
-      case 0:
-         /* match OK */
-         advance_pc(uc);
-         return;
-      default:
-         /* mismatch, or end of test */
-         siglongjmp(jmpbuf, 1);
+   if (trace_file) {
+     if (write_to_tracefile(write_trace, uc)!=0) {
+       /* end of test */
+       siglongjmp(jmpbuf, 1);
+       /* never */
+       return;
+     }
+   } else {
+     if (recv_and_compare_register_info(master_socket, uc)!=0) {
+       /* mismatch, or end of test */
+       siglongjmp(jmpbuf, 1);
+       /* never */
+       return;
+     }
    }
+   advance_pc(uc);
 }
 
 void apprentice_sigill(int sig, siginfo_t *si, void *uc)
 {
-   switch (send_register_info(apprentice_socket, uc))
-   {
+  int resp;
+  if (trace_file) {
+    resp = read_tracefile_and_check(read_trace, uc);
+  } else {
+    resp = send_register_info(apprentice_socket, uc);
+  }
+  switch (resp)
+  {
       case 0:
          /* match OK */
          advance_pc(uc);
@@ -75,6 +102,9 @@ void apprentice_sigill(int sig, siginfo_t *si, void *uc)
          exit(0);
       default:
          /* mismatch */
+         if (trace_file) {
+            report_match_status();
+         }
          exit(1);
    }
 }
@@ -136,7 +166,13 @@ int master(int sock)
 {
    if (sigsetjmp(jmpbuf, 1))
    {
-      return report_match_status();
+      if (trace_file) {
+         close(trace_file);
+         fprintf(stderr,"Done...\n");
+         return 0;
+      } else {
+         return report_match_status();
+      }
    }
    master_socket = sock;
    set_sigill_handler(&master_sigill);
@@ -165,6 +201,7 @@ void usage (void)
    fprintf(stderr, "between master and apprentice risu processes.\n\n");
    fprintf(stderr, "Options:\n");
    fprintf(stderr, "  --master          Be the master (server)\n");
+   fprintf(stderr, "  -t, --trace=FILE  Record/playback trace file\n");
    fprintf(stderr, "  -h, --host=HOST   Specify master host machine (apprentice only)\n");
    fprintf(stderr, "  -p, --port=PORT   Specify the port to connect to/listen on (default 9191)\n");
 }
@@ -175,6 +212,7 @@ int main(int argc, char **argv)
    uint16_t port = 9191;
    char *hostname = "localhost";
    char *imgfile;
+   char *trace_fn = NULL;
    int sock;
 
    // TODO clean this up later
@@ -185,6 +223,7 @@ int main(int argc, char **argv)
          {
             { "help", no_argument, 0, '?'},
             { "master", no_argument, &ismaster, 1 },
+            { "trace", required_argument, 0, 't' },
             { "host", required_argument, 0, 'h' },
             { "port", required_argument, 0, 'p' },
             { "test-fp-exc", no_argument, &test_fp_exc, 1 },
@@ -203,6 +242,11 @@ int main(int argc, char **argv)
          {
             /* flag set by getopt_long, do nothing */
             break;
+         }
+         case 't':
+         {
+           trace_fn = optarg;
+           break;
          }
          case 'h':
          {
@@ -234,18 +278,28 @@ int main(int argc, char **argv)
    }
 
    load_image(imgfile);
-   
+
    if (ismaster)
    {
-      fprintf(stderr, "master port %d\n", port);
-      sock = master_connect(port);
-      return master(sock);
+     if (trace_fn)
+       {
+         trace_file = open(trace_fn, O_WRONLY|O_CREAT, S_IRWXU);
+       } else {
+         fprintf(stderr, "master port %d\n", port);
+         sock = master_connect(port);
+       }
+     return master(sock);
    }
    else
-   {
-      fprintf(stderr, "apprentice host %s port %d\n", hostname, port);
-      sock = apprentice_connect(hostname, port);
-      return apprentice(sock);
+     {
+     if (trace_fn)
+       {
+         trace_file = open(trace_fn, O_RDONLY);
+       } else {
+         fprintf(stderr, "apprentice host %s port %d\n", hostname, port);
+         sock = apprentice_connect(hostname, port);
+       }
+     return apprentice(sock);
    }
 }
 

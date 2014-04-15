@@ -28,6 +28,13 @@ struct reginfo
     __uint128_t vregs[32];
 };
 
+typedef struct
+{
+    uint64_t pc;
+    uint32_t risu_op;
+} trace_header_t;
+
+
 /* initialize structure from a ucontext */
 void reginfo_init(struct reginfo *ri, ucontext_t *uc);
 
