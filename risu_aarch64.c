@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <ucontext.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "risu.h"
 #include "risu_reginfo_aarch64.h"
@@ -28,9 +29,7 @@ void advance_pc(void *vuc)
 {
     ucontext_t *uc = vuc;
     uc->uc_mcontext.pc += 4;
-    if (ismaster) {
-      report_test_status((void *) uc->uc_mcontext.pc);
-    }
+    report_test_status((void *) uc->uc_mcontext.pc);
 }
 
 static void set_x0(void *vuc, uint64_t x0)
