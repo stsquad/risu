@@ -25,6 +25,7 @@
 #include <sys/mman.h>
 #include <fcntl.h>
 #include <string.h>
+#include <zlib.h>
 
 #include "risu.h"
 
@@ -32,6 +33,7 @@ void *memblock = 0;
 
 int apprentice_socket, master_socket;
 int trace_file = 0;
+gzFile gz_trace_file;
 
 sigjmp_buf jmpbuf;
 
@@ -52,13 +54,13 @@ void report_test_status(void *pc)
 
 int write_trace(void *ptr, size_t bytes)
 {
-   size_t res = write(trace_file, ptr, bytes);
+   size_t res = gzwrite(gz_trace_file, ptr, bytes);
    return res == bytes;
 }
 
 int read_trace(void *ptr, size_t bytes)
 {
-   size_t res = read(trace_file, ptr, bytes);
+   size_t res = gzread(gz_trace_file, ptr, bytes);
    return res == bytes;
 }
 
@@ -166,8 +168,9 @@ int master(int sock)
 {
    if (sigsetjmp(jmpbuf, 1))
    {
-      if (trace_file) {
-         close(trace_file);
+      if (trace_file)
+      {
+         gzclose(gz_trace_file);
          fprintf(stderr,"Done...\n");
          return 0;
       } else {
@@ -284,6 +287,7 @@ int main(int argc, char **argv)
      if (trace_fn)
        {
          trace_file = open(trace_fn, O_WRONLY|O_CREAT, S_IRWXU);
+         gz_trace_file = gzdopen(trace_file, "wb9");
        } else {
          fprintf(stderr, "master port %d\n", port);
          sock = master_connect(port);
@@ -295,6 +299,7 @@ int main(int argc, char **argv)
      if (trace_fn)
        {
          trace_file = open(trace_fn, O_RDONLY);
+         gz_trace_file = gzdopen(trace_file, "rb");
        } else {
          fprintf(stderr, "apprentice host %s port %d\n", hostname, port);
          sock = apprentice_connect(hostname, port);
