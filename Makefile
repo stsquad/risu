@@ -14,6 +14,7 @@
 include Makefile.in
 
 CFLAGS ?= -g -Wall
+LDFLAGS += -lz
 
 PROG=risu
 SRCS=risu.c comms.c risu_$(ARCH).c risu_reginfo_$(ARCH).c
@@ -31,7 +32,7 @@ all: $(PROG) $(BINS)
 dump: $(RISU_ASMS)
 
 $(PROG): $(OBJS)
-	$(CC) $(STATIC) $(CFLAGS) -o $@ $^
+	$(CC) $(STATIC) $(CFLAGS) -o $@ $^ $(LDFLAGS) 
 
 %.risu.asm: %.risu.bin
 	${OBJDUMP} -b binary -m $(ARCH) -D $^ > $@
