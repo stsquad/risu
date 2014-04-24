@@ -35,7 +35,7 @@ all: $(PROG) $(BINS)
 dump: $(RISU_ASMS)
 
 $(PROG): $(OBJS)
-	$(CC) $(STATIC) $(ALL_CFLAGS) -o $@ $^
+	$(CC) $(STATIC) $(ALL_CFLAGS) -o $@ $^ $(LDFLAGS)
 
 %.risu.asm: %.risu.bin
 	${OBJDUMP} -b binary -m $(ARCH) -D $^ > $@

@@ -26,12 +26,19 @@
 #include <fcntl.h>
 #include <string.h>
 
+#include "config.h"
+
 #include "risu.h"
 
 void *memblock = 0;
 
 int apprentice_socket, master_socket;
 int trace_file = 0;
+
+#ifdef HAVE_ZLIB
+#include <zlib.h>
+gzFile gz_trace_file;
+#endif
 
 sigjmp_buf jmpbuf;
 
@@ -59,7 +66,11 @@ int read_sock(void *ptr, size_t bytes)
 
 int write_trace(void *ptr, size_t bytes)
 {
+#ifdef HAVE_ZLIB
+   size_t res = gzwrite(gz_trace_file, ptr, bytes);
+#else
    size_t res = write(trace_file, ptr, bytes);
+#endif
    return (res == bytes) ? 0 : 1;
 }
 
@@ -77,7 +88,11 @@ int write_sock(void *ptr, size_t bytes)
 
 int read_trace(void *ptr, size_t bytes)
 {
+#ifdef HAVE_ZLIB
+   size_t res = gzread(gz_trace_file, ptr, bytes);
+#else
    size_t res = read(trace_file, ptr, bytes);
+#endif
    return (res == bytes) ? 0 : 1;
 }
 
@@ -202,9 +217,12 @@ int master(int sock)
 {
    if (sigsetjmp(jmpbuf, 1))
    {
-      if (trace_file) {
-         close(trace_file);
-         fprintf(stderr,"\nDone...\n");
+      if (trace_file)
+      {
+#ifdef HAVE_ZLIB
+         gzclose(gz_trace_file);
+#endif
+         fprintf(stderr,"Done...\n");
          return 0;
       } else {
          return report_match_status();
@@ -320,6 +338,9 @@ int main(int argc, char **argv)
       if (trace_fn)
       {
          trace_file = open(trace_fn, O_WRONLY|O_CREAT, S_IRWXU);
+#ifdef HAVE_ZLIB
+         gz_trace_file = gzdopen(trace_file, "wb9");
+#endif
       } else {
          fprintf(stderr, "master port %d\n", port);
          sock = master_connect(port);
@@ -331,6 +352,9 @@ int main(int argc, char **argv)
       if (trace_fn)
       {
          trace_file = open(trace_fn, O_RDONLY);
+#ifdef HAVE_ZLIB
+         gz_trace_file = gzdopen(trace_file, "rb");
+#endif
       } else {
          fprintf(stderr, "apprentice host %s port %d\n", hostname, port);
          sock = apprentice_connect(hostname, port);
