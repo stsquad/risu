@@ -6,6 +6,10 @@ compile() {
     $CC $CFLAGS -c -o ${1}.o ${1}.c 2>/dev/null
 }
 
+link() {
+    $LD $LDFLAGS -l${2} -o ${1} ${1}.o 2>/dev/null
+}
+
 check_define() {
     c=${tmp_dir}/check_define_${1}
     cat > ${c}.c <<EOF
@@ -39,6 +43,17 @@ check_type() {
 int main(void) { $1 thisone; return 0; }
 EOF
     compile $c
+}
+
+check_lib() {
+    c=${tmp_dir}/check_lib${1}
+    cat > ${c}.c <<EOF
+#include <stdint.h>
+#include <$2.h>
+
+int main(void) { $3; return 0; }
+EOF
+    compile $c && link $c $1
 }
 
 generate_config() {
@@ -120,11 +135,17 @@ done
 
 CC="${CC-${CROSS_PREFIX}gcc}"
 AS="${AS-${CROSS_PREFIX}as}"
+LD="${LD-${CROSS_PREFIX}ld}"
 OBJCOPY="${OBJCOPY-${CROSS_PREFIX}objcopy}"
 OBJDUMP="${OBJDUMP-${CROSS_PREFIX}objdump}"
 
 if test "x${ARCH}" = "x"; then
     guess_arch
+fi
+
+if ! check_lib z zlib "zlibVersion()"; then
+    echo "Cannot find libz compression library"
+    exit 1
 fi
 
 generate_config
