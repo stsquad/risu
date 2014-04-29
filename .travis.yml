@@ -1,0 +1,29 @@
+language: c
+compiler:
+  - gcc
+
+env:
+  global:
+    # Cross compiler prefix
+    - CROSS_PREFIX=""
+    # Build architecture/debian arch
+    - ARCH=""
+    - DEBIAN_ARCH=""
+
+matrix:
+  include:
+    - env: ARCH="i386"
+    - env: CROSS_PREFIX="aarch64-linux-gnu-"
+           ARCH="aarch64"
+           DEBIAN_ARCH="arm64"
+    - env: CROSS_PREFIX="arm-linux-gnueabihf-"
+           ARCH="arm"
+           DEBIAN_ARCH="armhf"
+             
+before_install:
+  - sudo dpkg --add-architecture ${DEBIAN_ARCH}
+  - sudo apt-get update -qq
+  - sudo apt-get install -qq crossbuild-essential-${DEBIAN_ARCH} zlib1g-dev:${DEBIAN_ARCH}
+script:
+  - CROSS_PREFIX=${CROSS_PREFIX} ARCH=${ARCH} ./configure
+  - make
