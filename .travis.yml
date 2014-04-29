@@ -1,0 +1,33 @@
+language: c
+compiler: gcc
+env:
+  global:
+    # Cross compiler prefix
+    - CROSS_PREFIX="arm-linux-gnueabihf-"
+    # Build architecture/debian arch
+    - ARCH="arm"
+    - DEBIAN_ARCH="armhf"
+    - PKGS="gcc-arm-linux-gnueabihf"
+    - PPA=""
+    - EXTERNAL_TOOLCHAIN=""
+matrix:
+  include:
+    # For aarch64 we need an external toolchain (pre-built, 32 bit)
+    - env: EXTERNAL_TOOLCHAIN="https://releases.linaro.org/14.08/components/toolchain/binaries/gcc-linaro-aarch64-linux-gnu-4.9-2014.08_linux.tar.xz"
+           CROSS_PREFIX="aarch64-linux-gnu-"
+           ARCH="aarch64"
+           DEBIAN_ARCH="arm64"
+           PKGS="libc6:i386 libgcc1:i386 libncurses5:i386 libstdc++6:i386 zlib1g:i386"
+# i386 build is currently experimental/broken
+#     - env: ARCH="i386"
+#            CROSS_PREFIX=""
+#            DEBIAN_ARCH=""
+#            PPA=""
+#            PKGS=""
+before_install:
+  - ./scripts/travis-before.sh
+  - export PATH=`pwd`/ext-toolchain/bin:${PATH}
+script:
+  - CC=${CROSS_PREFIX}gcc ./configure
+  - cat Makefile.in
+  - make
