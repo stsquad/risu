@@ -31,8 +31,10 @@ int send_data_pkt(int sock, void *pkt, int pktlen);
 int recv_data_pkt(int sock, void *pkt, int pktlen);
 void send_response_byte(int sock, int resp);
 
+/* Check the memblock is consistent with it's apprentice */
+int check_memblock_match(void);
+
 extern uintptr_t image_start_address;
-extern void *memblock;
 
 extern int test_fp_exc;
 
@@ -48,28 +50,83 @@ extern int test_fp_exc;
 
 /* Interface provided by CPU-specific code: */
 
-/* Send the register information from the struct ucontext down the socket.
- * Return the response code from the master.
- * NB: called from a signal handler.
- */
-int send_register_info(int sock, void *uc);
-
-/* Read register info from the socket and compare it with that from the
- * ucontext. Return 0 for match, 1 for end-of-test, 2 for mismatch.
- * NB: called from a signal handler.
- */
-int recv_and_compare_register_info(int sock, void *uc);
-
 /* Print a useful report on the status of the last comparison
- * done in recv_and_compare_register_info(). This is called on
- * exit, so need not restrict itself to signal-safe functions.
- * Should return 0 if it was a good match (ie end of test)
- * and 1 for a mismatch.
+ * done by master_sigill(). This is called on exit, so need not
+ * restrict itself to signal-safe functions.
+ *
+ * @param packet_mismatch: Comms got out of sync
+ * @param mem_used: We have done a memory compare op
+ *
+ * @return: 0 if it was a good match (ie end of test) and 1 for a mismatch.
  */
-int report_match_status(void);
+int report_match_status(int packet_mismatch, int mem_used);
 
 /* Move the PC past this faulting insn by adjusting ucontext
+ *
+ * @param uc: anonymous user context from signal
  */
 void advance_pc(void *uc);
+
+/* Synchronise state from system ucontext for later comparison.
+ *
+ * Both master and apprentice call this to save the current execution
+ * state (mainly registers) for later analysis.
+ *
+ * @param uc: anonymous user context from signal
+ */
+void sync_master_state(void *uc);
+
+/* Fetch the current risu operation.
+ *
+ * This returns the current operation which will be encoded
+ * differently depending on the architecture. This assumes the system
+ * state has already been synchronised with sync_master_state.
+ *
+ * @return: base RISU operation (OP_* above)
+ */
+int fetch_risu_op(void);
+
+/* Check master and apprentice registers match.
+ *
+ * This assumes the internal copies of the register state have been
+ * updated.
+ *
+ * @return: true if registers match
+ */
+int check_registers_match(void);
+
+/* Get pointer to the apprentice register info
+ *
+ * This is used so the master risu can update its reference copy from
+ * the apprentice.
+ *
+ * @param sz: reference for returning size of structure
+ * @return: pointer to the $ARCH specific register info
+ */
+void * get_appr_reg_ptr(size_t *sz);
+
+/* Get pointer to the master register info
+ *
+ * This is used so the apprentice risu can send it's register state to
+ * the master instance.
+ *
+ * @param sz: reference for returning size of structure
+ * @return: pointer to the $ARCH specific register info
+ */
+void * get_master_reg_ptr(size_t *sz);
+
+/*
+ * Notify the system of the location of the memory block
+ */
+void * set_memblock(void);
+
+/* Set a $ARCH dependant register to point at a new section of the
+ * memblock based on an offset determined by another $ARCH dependent
+ * register.
+ *
+ * @param memblock: base address of the memory block
+ * @param vuc: anonymous user context from signal
+ */
+void get_memblock(void *memblock, void *vuc);
 
 #endif /* RISU_H */

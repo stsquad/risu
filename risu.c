@@ -28,19 +28,98 @@
 
 #include "risu.h"
 
-void *memblock = 0;
+/* The memblock is a block of RAM that risu instructions can access.
+ * From time to time risugen will emit code to move the base pointer
+ * around in the overall block. The apprentice memblock is only used
+ * by the master to keep a copy of it's remote end.
+ */
+void *memblock, *apprentice_memblock;
 
-int apprentice_socket, master_socket;
+/* used when talking to remote risu */
+int comms_sock;
+int packet_mismatch, mem_used;
 
 sigjmp_buf jmpbuf;
 
 /* Should we test for FP exception status bits? */
 int test_fp_exc = 0;
 
-void master_sigill(int sig, siginfo_t *si, void *uc)
+/* Read/write state */
+static int write_state(void *ptr, size_t bytes)
 {
-   switch (recv_and_compare_register_info(master_socket, uc))
-   {
+   return send_data_pkt(comms_sock, ptr, bytes);
+}
+
+static int read_state(void *ptr, size_t bytes)
+{
+   return recv_data_pkt(comms_sock, ptr, bytes);
+}
+
+int check_memblock_match(void)
+{
+   return memcmp(memblock, apprentice_memblock, MEMBLOCKLEN)==0;
+}
+
+
+/* Master SIGILL
+ *
+ * The master is always checking it's state against the apprentice and
+ * will report when the thing goes out of sync.
+ */
+
+static void master_sigill(int sig, siginfo_t *si, void *uc)
+{
+   int resp = 0;
+   int op;
+   
+   sync_master_state(uc);
+   op = fetch_risu_op();
+
+   switch (op) {
+      case OP_COMPARE:
+      case OP_TESTEND:
+      default:
+      {
+         /* Do a simple register compare on (a) explicit request
+          * (b) end of test (c) a non-risuop UNDEF
+          */
+         size_t arch_reg_size;
+         void *appr_reg_ptr = get_appr_reg_ptr(&arch_reg_size);
+         if (read_state(appr_reg_ptr, arch_reg_size)) {
+            packet_mismatch = 1;
+            resp = 2;
+         } else if (!check_registers_match()) {
+            /* register mismatch */
+            resp = 2;
+         } else if (op == OP_TESTEND) {
+            resp = 1;
+         }
+       
+         send_response_byte(comms_sock, resp);
+         break;
+      }
+      case OP_SETMEMBLOCK:
+         memblock = set_memblock();
+         break;
+      case OP_GETMEMBLOCK:
+         get_memblock(memblock, uc);
+         break;
+      case OP_COMPAREMEM:
+      {
+         mem_used = 1;
+         if (read_state(apprentice_memblock, MEMBLOCKLEN)) {
+            packet_mismatch = 1;
+            resp = 2;
+         } else if (!check_memblock_match()) {
+            /* memory mismatch */
+            resp = 2;
+         }      
+         send_response_byte(comms_sock, resp);
+         break;
+      }
+   }
+
+   switch (resp) {
       case 0:
          /* match OK */
          advance_pc(uc);
@@ -51,9 +130,43 @@ void master_sigill(int sig, siginfo_t *si, void *uc)
    }
 }
 
+/* The apprentice just carries on reporting it's state for the
+ * apprentice to check.
+ */
 void apprentice_sigill(int sig, siginfo_t *si, void *uc)
 {
-   switch (send_register_info(apprentice_socket, uc))
+   int resp = 0;
+   int op;
+
+   sync_master_state(uc);
+   op = fetch_risu_op();
+
+   switch (op) {
+      case OP_COMPARE:
+      case OP_TESTEND:
+      default:
+      {
+         size_t arch_reg_size;
+         void *master_reg_ptr = get_master_reg_ptr(&arch_reg_size);
+
+         /* Do a simple register compare on (a) explicit request
+          * (b) end of test (c) a non-risuop UNDEF
+          */
+         resp = write_state(master_reg_ptr, arch_reg_size);
+         break;
+      }
+      case OP_SETMEMBLOCK:
+         memblock = set_memblock();
+         break;
+      case OP_GETMEMBLOCK:
+         get_memblock(memblock, uc);
+         break;
+      case OP_COMPAREMEM:
+         resp = write_state(memblock, MEMBLOCKLEN);
+         break;
+   }
+
+   switch (resp)
    {
       case 0:
          /* match OK */
@@ -121,13 +234,13 @@ void load_image(const char *imgfile)
    image_start_address = (uintptr_t)addr;
 }
 
-int master(int sock)
+int master()
 {
    if (sigsetjmp(jmpbuf, 1))
    {
-      return report_match_status();
+      return report_match_status(packet_mismatch, mem_used);
    }
-   master_socket = sock;
+   apprentice_memblock = malloc(MEMBLOCKLEN);
    set_sigill_handler(&master_sigill);
    fprintf(stderr, "starting image\n");
    image_start();
@@ -135,9 +248,8 @@ int master(int sock)
    exit(1);
 }
 
-int apprentice(int sock)
+int apprentice()
 {
-   apprentice_socket = sock;
    set_sigill_handler(&apprentice_sigill);
    fprintf(stderr, "starting image\n");
    image_start();
@@ -153,7 +265,6 @@ int main(int argc, char **argv)
    uint16_t port = 9191;
    char *hostname = "localhost";
    char *imgfile;
-   int sock;
 
    // TODO clean this up later
    
@@ -214,14 +325,14 @@ int main(int argc, char **argv)
    if (ismaster)
    {
       fprintf(stderr, "master port %d\n", port);
-      sock = master_connect(port);
-      return master(sock);
+      comms_sock = master_connect(port);
+      return master();
    }
    else
    {
       fprintf(stderr, "apprentice host %s port %d\n", hostname, port);
-      sock = apprentice_connect(hostname, port);
-      return apprentice(sock);
+      comms_sock = apprentice_connect(hostname, port);
+      return apprentice();
    }
 }
 

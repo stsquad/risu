@@ -17,12 +17,26 @@
 #include "risu.h"
 #include "risu_reginfo_aarch64.h"
 
+/* The master and apprentice views of the register state are arch
+ * specific */
 struct reginfo master_ri, apprentice_ri;
 
-uint8_t apprentice_memblock[MEMBLOCKLEN];
+void sync_master_state(void *uc)
+{
+    reginfo_init(&master_ri, uc);
+}       
 
-static int mem_used = 0;
-static int packet_mismatch = 0;
+int fetch_risu_op(void)
+{
+   uint32_t insn = master_ri.faulting_insn;
+   /* Return the risuop we have been asked to do
+    * (or -1 if this was a SIGILL for a non-risuop insn)
+    */
+   uint32_t op = insn & 0xf;
+   uint32_t key = insn & ~0xf;
+   uint32_t risukey = 0x00005af0;
+   return (key != risukey) ? -1 : op;
+}
 
 void advance_pc(void *vuc)
 {
@@ -30,106 +44,33 @@ void advance_pc(void *vuc)
     uc->uc_mcontext.pc += 4;
 }
 
-static void set_x0(void *vuc, uint64_t x0)
+int check_registers_match(void)
 {
-    ucontext_t *uc = vuc;
-    uc->uc_mcontext.regs[0] = x0;
+   return reginfo_is_eq(&master_ri, &apprentice_ri);
 }
 
-static int get_risuop(uint32_t insn)
+void * get_appr_reg_ptr(size_t *sz)
 {
-    /* Return the risuop we have been asked to do
-     * (or -1 if this was a SIGILL for a non-risuop insn)
-     */
-    uint32_t op = insn & 0xf;
-    uint32_t key = insn & ~0xf;
-    uint32_t risukey = 0x00005af0;
-    return (key != risukey) ? -1 : op;
+   *sz = sizeof(apprentice_ri);
+   return &apprentice_ri;
 }
 
-int send_register_info(int sock, void *uc)
+void * get_master_reg_ptr(size_t *sz)
 {
-    struct reginfo ri;
-    int op;
-    reginfo_init(&ri, uc);
-    op = get_risuop(ri.faulting_insn);
-
-    switch (op) {
-    case OP_COMPARE:
-    case OP_TESTEND:
-    default:
-        /* Do a simple register compare on (a) explicit request
-         * (b) end of test (c) a non-risuop UNDEF
-         */
-        return send_data_pkt(sock, &ri, sizeof(ri));
-    case OP_SETMEMBLOCK:
-        memblock = (void *)ri.regs[0];
-       break;
-    case OP_GETMEMBLOCK:
-        set_x0(uc, ri.regs[0] + (uintptr_t)memblock);
-        break;
-    case OP_COMPAREMEM:
-        return send_data_pkt(sock, memblock, MEMBLOCKLEN);
-        break;
-    }
-    return 0;
+   *sz = sizeof(master_ri);
+   return &master_ri;
 }
 
-/* Read register info from the socket and compare it with that from the
- * ucontext. Return 0 for match, 1 for end-of-test, 2 for mismatch.
- * NB: called from a signal handler.
- *
- * We don't have any kind of identifying info in the incoming data
- * that says whether it's register or memory data, so if the two
- * sides get out of sync then we will fail obscurely.
- */
-int recv_and_compare_register_info(int sock, void *uc)
+void * set_memblock(void)
 {
-    int resp = 0, op;
+   return (void *)master_ri.regs[0];
+}
 
-    reginfo_init(&master_ri, uc);
-    op = get_risuop(master_ri.faulting_insn);
-
-    switch (op) {
-    case OP_COMPARE:
-    case OP_TESTEND:
-    default:
-        /* Do a simple register compare on (a) explicit request
-         * (b) end of test (c) a non-risuop UNDEF
-         */
-        if (recv_data_pkt(sock, &apprentice_ri, sizeof(apprentice_ri))) {
-            packet_mismatch = 1;
-            resp = 2;
-
-        } else if (!reginfo_is_eq(&master_ri, &apprentice_ri)) {
-            /* register mismatch */
-            resp = 2;
-
-        } else if (op == OP_TESTEND) {
-            resp = 1;
-        }
-        send_response_byte(sock, resp);
-        break;
-      case OP_SETMEMBLOCK:
-          memblock = (void *)master_ri.regs[0];
-          break;
-      case OP_GETMEMBLOCK:
-          set_x0(uc, master_ri.regs[0] + (uintptr_t)memblock);
-          break;
-      case OP_COMPAREMEM:
-         mem_used = 1;
-         if (recv_data_pkt(sock, apprentice_memblock, MEMBLOCKLEN)) {
-             packet_mismatch = 1;
-             resp = 2;
-         } else if (memcmp(memblock, apprentice_memblock, MEMBLOCKLEN) != 0) {
-             /* memory mismatch */
-             resp = 2;
-         }
-         send_response_byte(sock, resp);
-         break;
-   }
-
-    return resp;
+void get_memblock(void *memblock, void *vuc)
+{
+   ucontext_t *uc = vuc;
+   uintptr_t new_ptr = master_ri.regs[0] + (uintptr_t)memblock;
+   uc->uc_mcontext.regs[0] = new_ptr;
 }
 
 /* Print a useful report on the status of the last comparison
@@ -138,10 +79,10 @@ int recv_and_compare_register_info(int sock, void *uc)
  * Should return 0 if it was a good match (ie end of test)
  * and 1 for a mismatch.
  */
-int report_match_status(void)
+int report_match_status(int packet_mismatch, int mem_used)
 {
    int resp = 0;
-   fprintf(stderr, "match status...\n");
+   fprintf(stderr, "match status(%d/%d)...\n", packet_mismatch, mem_used);
    if (packet_mismatch) {
        fprintf(stderr, "packet mismatch (probably disagreement "
                "about UNDEF on load/store)\n");
@@ -157,7 +98,7 @@ int report_match_status(void)
        fprintf(stderr, "mismatch on regs!\n");
        resp = 1;
    }
-   if (mem_used && memcmp(memblock, &apprentice_memblock, MEMBLOCKLEN) != 0) {
+   if (mem_used && !check_memblock_match()) {
        fprintf(stderr, "mismatch on memory!\n");
        resp = 1;
    }
@@ -174,3 +115,4 @@ int report_match_status(void)
    reginfo_dump_mismatch(&master_ri, &apprentice_ri, stderr);
    return resp;
 }
+
