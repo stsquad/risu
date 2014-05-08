@@ -110,6 +110,7 @@ done
 
 CC="${CC-${CROSS_PREFIX}gcc}"
 AS="${AS-${CROSS_PREFIX}as}"
+LD="${LD-${CROSS_PREFIX}ld}"
 OBJCOPY="${OBJCOPY-${CROSS_PREFIX}objcopy}"
 
 if test "x${ARCH}" = "x"; then

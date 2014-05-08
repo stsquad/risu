@@ -232,9 +232,11 @@ int recv_data_pkt(int sock, void *pkt, int pktlen)
 void send_response_byte(int sock, int resp)
 {
    unsigned char r = resp;
-   if (write(sock, &r, 1) != 1)
-   {
-      perror("write failed");
-      exit(1);
+   if (sock > 0) {
+      if (write(sock, &r, 1) != 1)
+      {
+         perror("write failed");
+         exit(1);
+      }
    }
 }

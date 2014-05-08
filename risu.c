@@ -25,6 +25,7 @@
 #include <sys/mman.h>
 #include <fcntl.h>
 #include <string.h>
+#include <zlib.h>
 
 #include "risu.h"
 
@@ -35,8 +36,10 @@
  */
 void *memblock, *apprentice_memblock;
 
-/* used when talking to remote risu */
-int comms_sock;
+/* used when talking to remote risu or reading/writing trace file */
+int comms_sock, trace_fd;
+gzFile gz_trace_file;
+
 int packet_mismatch, mem_used;
 
 sigjmp_buf jmpbuf;
@@ -47,12 +50,22 @@ int test_fp_exc = 0;
 /* Read/write state */
 static int write_state(void *ptr, size_t bytes)
 {
-   return send_data_pkt(comms_sock, ptr, bytes);
+   if (trace_fd) {
+      size_t res = gzwrite(gz_trace_file, ptr, bytes);
+      return res == bytes ? 0 : 1;
+   } else {
+      return send_data_pkt(comms_sock, ptr, bytes);
+   }
 }
 
 static int read_state(void *ptr, size_t bytes)
 {
-   return recv_data_pkt(comms_sock, ptr, bytes);
+   if (trace_fd) {
+      size_t res = gzread(gz_trace_file, ptr, bytes);
+      return res == bytes ? 0 : 1;
+   } else {
+      return recv_data_pkt(comms_sock, ptr, bytes);
+   }
 }
 
 int check_memblock_match(void)
@@ -153,6 +166,10 @@ void apprentice_sigill(int sig, siginfo_t *si, void *uc)
           * (b) end of test (c) a non-risuop UNDEF
           */
          resp = write_state(master_reg_ptr, arch_reg_size);
+         if (op == OP_TESTEND) {
+            fprintf(stderr,"%s: OP_TESTEND\n", __func__);
+            resp = 1;
+         }
          break;
       }
       case OP_SETMEMBLOCK:
@@ -174,6 +191,10 @@ void apprentice_sigill(int sig, siginfo_t *si, void *uc)
          return;
       case 1:
          /* end of test */
+         if (trace_fd) {
+            gzclose(gz_trace_file);
+            fprintf(stderr,"%s: flushing file\n", __func__);
+         }
          exit(0);
       default:
          /* mismatch */
@@ -265,6 +286,7 @@ int main(int argc, char **argv)
    uint16_t port = 9191;
    char *hostname = "localhost";
    char *imgfile;
+   char *tracefile = NULL;
 
    // TODO clean this up later
    
@@ -273,13 +295,14 @@ int main(int argc, char **argv)
       static struct option longopts[] = 
          {
             { "master", no_argument, &ismaster, 1 },
+            { "trace", required_argument, 0, 't' },
             { "host", required_argument, 0, 'h' },
             { "port", required_argument, 0, 'p' },
             { "test-fp-exc", no_argument, &test_fp_exc, 1 },
             { 0,0,0,0 }
          };
       int optidx = 0;
-      int c = getopt_long(argc, argv, "h:p:", longopts, &optidx);
+      int c = getopt_long(argc, argv, "h:p:t:", longopts, &optidx);
       if (c == -1)
       {
          break;
@@ -291,6 +314,11 @@ int main(int argc, char **argv)
          {
             /* flag set by getopt_long, do nothing */
             break;
+         }
+         case 't':
+         {
+           tracefile = optarg;
+           break;
          }
          case 'h':
          {
@@ -325,13 +353,27 @@ int main(int argc, char **argv)
    if (ismaster)
    {
       fprintf(stderr, "master port %d\n", port);
-      comms_sock = master_connect(port);
+      if (tracefile)
+      {
+         trace_fd = open(tracefile, O_RDONLY);
+         gz_trace_file = gzdopen(trace_fd, "rb");
+         fprintf(stderr,"%s: %s -> trace_fd=%d, gz_trace_file=%p\n", __func__, tracefile, trace_fd, gz_trace_file);
+      } else {
+         comms_sock = master_connect(port);
+      }
       return master();
    }
    else
    {
       fprintf(stderr, "apprentice host %s port %d\n", hostname, port);
-      comms_sock = apprentice_connect(hostname, port);
+      if (tracefile)
+      {
+         trace_fd = open(tracefile, O_WRONLY|O_CREAT, S_IRWXU);
+         gz_trace_file = gzdopen(trace_fd, "wb9");
+         fprintf(stderr,"%s: %s -> trace_fd=%d, gz_trace_file=%p\n", __func__, tracefile, trace_fd, gz_trace_file);
+      } else {
+         comms_sock = apprentice_connect(hostname, port);
+      }
       return apprentice();
    }
 }
