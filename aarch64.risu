@@ -2585,6 +2585,16 @@ FMLA_IDX A64_V 0 Q U 01111 sz:2 l m rm:4 0001 h 0 rn:5 rd:5
 FMLS_IDX A64_V 0 Q U 01111 sz:2 l m rm:4 0101 h 0 rn:5 rd:5
 FMUL_FMULX_IDX A64_V 0 Q U 01111 sz:2 l m rm:4 1001 h 0 rn:5 rd:5
 
+#
+# C3.5.25 / Table C3-74
+# 31             24 23  22 21       17 16     13 12  11 10 9  5 4  0
+#  0 1 0 0 1 1 1 0 | 0  0 | 1 0 1 0 0 | 0 0 1 0 | D | 1 0 | Rn | Rd 
+AES    A64_V 0100111000101000010 d:1 10 rn:5 rd:5
+AESMC  A74_V 0100111000101000011 d:1 10 rn:5 rd:5
+# 31             24 23  22 21  20  16  15    17 16      9  5 4  0
+#  0 1 0 1 1 1 1 0 | 0  0 | 0 |  Rm  | 0 | 0 0 0 | 0 0 | Rn | Rd 
+
+
 # C3.6.22 Floating-point compare
 # 31 30 29 28 27 26 25 24 23 22 21 20  16 15 14 13 12 11 10 9    5 4       0
 #  M  0  S  1  1  1  1  0  type  1   Rm    op    1  0  0  0   Rn    opcode2
