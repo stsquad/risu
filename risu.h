@@ -40,17 +40,24 @@ extern int ismaster;
 
 /* Interface provided by CPU-specific code: */
 
+/* To keep the read/write logic from multiplying across all arches
+ * we wrap up the function here to keep all the changes in one place
+ */
+typedef int (*write_fn) (void *ptr, size_t bytes);
+typedef int (*read_fn) (void *ptr, size_t bytes);
+typedef void (*respond_fn) (int response);
+
 /* Send the register information from the struct ucontext down the socket.
  * Return the response code from the master.
  * NB: called from a signal handler.
  */
-int send_register_info(int sock, void *uc);
+int send_register_info(write_fn write_fn, void *uc);
 
 /* Read register info from the socket and compare it with that from the
  * ucontext. Return 0 for match, 1 for end-of-test, 2 for mismatch.
  * NB: called from a signal handler.
  */
-int recv_and_compare_register_info(int sock, void *uc);
+int recv_and_compare_register_info(read_fn read_fn, respond_fn respond, void *uc);
 
 /* Print a useful report on the status of the last comparison
  * done in recv_and_compare_register_info(). This is called on

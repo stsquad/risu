@@ -50,21 +50,30 @@ static int get_risuop(uint32_t insn)
     return (key != risukey) ? -1 : op;
 }
 
-int send_register_info(int sock, void *uc)
+int send_register_info(write_fn write_fn, void *uc)
 {
     struct reginfo ri;
-    int op;
+    trace_header_t header;
+    int op, r = 0;
+
     reginfo_init(&ri, uc);
     op = get_risuop(ri.faulting_insn);
 
+    /* Write a header with PC/op to keep in sync */
+    header.pc = ri.pc;
+    header.risu_op = op;
+    if (write_fn(&header, sizeof(header)) != 0) {
+       fprintf(stderr,"%s: failed header write\n", __func__);
+       return -1;
+    }
+
     switch (op) {
-    case OP_COMPARE:
     case OP_TESTEND:
-    default:
-        /* Do a simple register compare on (a) explicit request
-         * (b) end of test (c) a non-risuop UNDEF
-         */
-        return send_data_pkt(sock, &ri, sizeof(ri));
+       if (write_fn(&ri, sizeof(ri)) != 0) {
+          fprintf(stderr,"%s: failed last write\n", __func__);
+       }
+       r = 1;
+       break;
     case OP_SETMEMBLOCK:
         memblock = (void *)ri.regs[0];
        break;
@@ -72,10 +81,16 @@ int send_register_info(int sock, void *uc)
         set_x0(uc, ri.regs[0] + (uintptr_t)memblock);
         break;
     case OP_COMPAREMEM:
-        return send_data_pkt(sock, memblock, MEMBLOCKLEN);
+        return write_fn(memblock, MEMBLOCKLEN);
         break;
+    case OP_COMPARE:
+    default:
+        /* Do a simple register compare on (a) explicit request
+         * (b) end of test (c) a non-risuop UNDEF
+         */
+        return write_fn(&ri, sizeof(ri));
     }
-    return 0;
+    return r;
 }
 
 /* Read register info from the socket and compare it with that from the
@@ -86,51 +101,69 @@ int send_register_info(int sock, void *uc)
  * that says whether it's register or memory data, so if the two
  * sides get out of sync then we will fail obscurely.
  */
-int recv_and_compare_register_info(int sock, void *uc)
+int recv_and_compare_register_info(read_fn read_fn, respond_fn resp_fn, void *uc)
 {
     int resp = 0, op;
+    trace_header_t header;
 
     reginfo_init(&master_ri, uc);
     op = get_risuop(master_ri.faulting_insn);
 
-    switch (op) {
-    case OP_COMPARE:
-    case OP_TESTEND:
-    default:
-        /* Do a simple register compare on (a) explicit request
-         * (b) end of test (c) a non-risuop UNDEF
-         */
-        if (recv_data_pkt(sock, &apprentice_ri, sizeof(apprentice_ri))) {
-            packet_mismatch = 1;
-            resp = 2;
+    if (read_fn(&header, sizeof(header)) != 0) {
+       fprintf(stderr,"%s: failed header read\n", __func__);
+       return -1;
+    }
 
-        } else if (!reginfo_is_eq(&master_ri, &apprentice_ri)) {
-            /* register mismatch */
-            resp = 2;
+    if (header.risu_op == op ) {
 
-        } else if (op == OP_TESTEND) {
-            resp = 1;
-        }
-        send_response_byte(sock, resp);
-        break;
-      case OP_SETMEMBLOCK:
-          memblock = (void *)master_ri.regs[0];
-          break;
-      case OP_GETMEMBLOCK:
-          set_x0(uc, master_ri.regs[0] + (uintptr_t)memblock);
-          break;
-      case OP_COMPAREMEM:
-         mem_used = 1;
-         if (recv_data_pkt(sock, apprentice_memblock, MEMBLOCKLEN)) {
+       /* send OK for the header */
+       resp_fn(0);
+
+       switch (op) {
+       case OP_COMPARE:
+       case OP_TESTEND:
+       default:
+          /* Do a simple register compare on (a) explicit request
+           * (b) end of test (c) a non-risuop UNDEF
+           */
+          if (read_fn(&apprentice_ri, sizeof(apprentice_ri))) {
              packet_mismatch = 1;
              resp = 2;
-         } else if (memcmp(memblock, apprentice_memblock, MEMBLOCKLEN) != 0) {
+
+          } else if (!reginfo_is_eq(&master_ri, &apprentice_ri)) {
+             /* register mismatch */
+             resp = 2;
+
+          } else if (op == OP_TESTEND) {
+             resp = 1;
+          }
+          resp_fn(resp);
+          break;
+       case OP_SETMEMBLOCK:
+          memblock = (void *)master_ri.regs[0];
+          break;
+       case OP_GETMEMBLOCK:
+          set_x0(uc, master_ri.regs[0] + (uintptr_t)memblock);
+          break;
+       case OP_COMPAREMEM:
+          mem_used = 1;
+          if (read_fn(apprentice_memblock, MEMBLOCKLEN)) {
+                packet_mismatch = 1;
+                resp = 2;
+             } else if (memcmp(memblock, apprentice_memblock, MEMBLOCKLEN) != 0) {
              /* memory mismatch */
              resp = 2;
          }
-         send_response_byte(sock, resp);
+         resp_fn(resp);
          break;
-   }
+       }
+   } else {
+      fprintf(stderr, "out of sync %lx/%lx %d/%d\n",
+              master_ri.pc, header.pc,
+              op, header.risu_op);
+      resp = 2;
+      resp_fn(resp);
+    }
 
     return resp;
 }

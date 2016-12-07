@@ -25,6 +25,12 @@ struct reginfo
     vrregset_t vrregs;
 };
 
+typedef struct
+{
+    uint64_t pc;
+    uint32_t risu_op;
+} trace_header_t;
+
 /* initialize structure from a ucontext */
 void reginfo_init(struct reginfo *ri, ucontext_t *uc);
 

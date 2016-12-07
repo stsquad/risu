@@ -23,6 +23,12 @@ struct reginfo
     uint32_t fpscr;
 };
 
+typedef struct
+{
+    uint32_t pc;
+    uint32_t risu_op;
+} trace_header_t;
+
 /* initialize a reginfo structure with data from uc */
 void reginfo_init(struct reginfo *ri, ucontext_t *uc);
 
