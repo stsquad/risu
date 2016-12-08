@@ -179,4 +179,12 @@ to specify your hosts by IP address.
  * the documentation is rather minimal. This is because I don't
 really expect many people to need to use this :-)
 
+Contributed scripts
+-------------------
+
+The contrib/ directory contains various contributed scripts
+and other tools that are not necessary to use risu, but
+might be helpful. See the comments in each script for
+more information and documentation.
+
 -- Peter Maydell <peter.maydell@linaro.org>
