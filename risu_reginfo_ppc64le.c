@@ -105,9 +105,9 @@ void reginfo_dump(struct reginfo *ri, int is_master)
 {
     int i;
     if (is_master) {
-        fprintf(stderr, "  faulting insn \e[1;101;37m0x%x\e[0m\n", ri->faulting_insn);
-        fprintf(stderr, "  prev insn     \e[1;101;37m0x%x\e[0m\n", ri->prev_insn);
-        fprintf(stderr, "  prev addr     \e[1;101;37m0x%" PRIx64 "\e[0m\n\n", ri->prev_addr);
+        fprintf(stderr, "  faulting insn 0x%x\n", ri->faulting_insn);
+        fprintf(stderr, "  prev insn     0x%x\n", ri->prev_insn);
+        fprintf(stderr, "  prev addr    0x%" PRIx64 "\n\n", ri->nip);
     }
 
     for (i = 0; i < 16; i++) {
