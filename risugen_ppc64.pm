@@ -75,6 +75,13 @@ sub write_add_ri($$$)
     insn32((0xe << 26) | ($rt << 21) | ($ra << 16) | ($imm & 0xffff));
 }
 
+sub write_sxt32($$)
+{
+    my ($ra, $rs) = @_;
+
+    insn32((0x1f << 26) | ($rs << 21) | ($ra << 16) | 0x7b4);
+}
+
 sub write_mov_ri($$)
 {
     # We always use a MOVW/MOVT pair, for simplicity.
@@ -87,10 +94,10 @@ sub write_mov_ri($$)
         write_mov_ri16($rd, $imm);
     }
 
-    #if ($is_aarch64 && $imm < 0) {
+    if ($imm < 0) {
         # sign extend to allow small negative imm constants
-    #    write_sxt32($rd, $rd);
-    #}
+        write_sxt32($rd, $rd);
+    }
 }
 
 sub write_random_ppc64_fpdata()
