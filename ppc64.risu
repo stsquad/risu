@@ -3019,12 +3019,15 @@ XSREDP PPC64LE 111100 t:5 00000 b:5 00101 1010 bx:1 tx:1
 XSRESP PPC64LE 111100 t:5 00000 b:5 00001 1010 bx:1 tx:1
 
 # format:Z23 book:I page:636 v3.0 xsrqpi[x] VSX Scalar Round QP to Integral
-XSRQPI PPC64LE 111111 vrt:5 0000 r:1 vrb:5 rmc:2 000001010
+XSRQPI PPC64LE 111111 vrt:5 0000 r:1 vrb:5 rmc:2 000001010 \
+!constraints { ($r == 0 && ($rmc != 1 && $rmc != 2)) || $r == 1; }
 # format:Z23 book:I page:636 v3.0 xsrqpi[x] VSX Scalar Round QP to Integral
-XSRQPIx PPC64LE 111111 vrt:5 0000 r:1 vrb:5 rmc:2 000001011
+XSRQPIx PPC64LE 111111 vrt:5 0000 r:1 vrb:5 rmc:2 000001011 \
+!constraints { ($r == 0 && ($rmc != 1 && $rmc != 2)) || $r == 1; }
 
 # format:Z23 book:I page:638 v3.0 xsrqpxp VSX Scalar Round QP to XP
-XSRQPXP PPC64LE 111111 vrt:5 0000 r:1 vrb:5 rmc:2 001001010
+XSRQPXP PPC64LE 111111 vrt:5 0000 r:1 vrb:5 rmc:2 001001010 \
+!constraints { ($r == 0 && ($rmc != 1 && $rmc != 2)) || $r == 1; }
 
 # format:XX2 book:I page:640 v2.07 xsrsp VSX Scalar Round DP to SP
 XSRSP PPC64LE 111100 t:5 00000 b:5 10001 1001 bx:1 tx:1
