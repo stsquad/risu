@@ -61,8 +61,8 @@ sub write_mov_ri32($$)
 {
     my ($rd, $imm) = @_;
 
-    # li rd,immediate@h
-    write_mov_ri16($rd, ($imm >> 16) & 0xffff);
+    # lis rd,immediate@h
+    insn32(0xf << 26 | $rd << 21 | ($imm >> 16));
     # ori rd,rd,immediate@l
     insn32((0x18 << 26) | ($rd << 21) | ($rd << 16) | ($imm & 0xffff));
 }
