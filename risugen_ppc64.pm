@@ -100,7 +100,38 @@ sub write_mov_ri($$)
     }
 }
 
+sub write_mov_ri64($$)
+{
+    my ($imh, $iml) = @_;
+
+    # number of bit to shift
+    write_mov_ri16(19, 31);
+    # load the highest 32 bits
+    write_mov_ri32(20, $iml);
+    # shift left 32 bits (sld r20, r20, r19
+    insn32((0x1f << 26) | (20 << 21) | (20 << 16) | (19 << 11) | 0x36);
+    # write the lowest 32bits
+    write_mov_ri32(21, $imh);
+    # or r20, r20, r21
+    insn32((0x1f << 26) | (20 << 21) | (20 << 16) | (21 << 11) | 0x378);
+
+    # std r20, 16(r1)
+    insn32((0x3e << 26) | (20 << 21) | (1 << 16) | 0x10);
+}
+
 sub write_random_ppc64_fpdata()
+{
+    for (my $i = 0; $i < 32; $i++) {
+        # load a random doubleword value at r0
+        write_mov_ri64(rand(0xfffff), rand(0xfffff));
+        # since the EA is r1+16, load such value in FP reg
+        insn32((0x32 << 26) | ($i << 21) | (0x1 << 16) | 0x10);
+        insn32((0x39 << 26) | ($i << 21) | (0x1 << 16) | 0x12);
+
+    }
+}
+
+sub write_random_ppc64_fpdata_i()
 {
     # get an space from the stack
     insn32(0x3ac10020); # addi r22, r1, 32
