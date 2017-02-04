@@ -13,7 +13,6 @@
 
 /* Initialise the gp regs */
 li 0,0
-li 1,1
 li 2,2
 li 3,3
 li 4,4
@@ -25,7 +24,6 @@ li 9,9
 li 10, 10
 li 11, 11
 li 12, 12
-li 13, 13
 li 14, 14
 li 15, 15
 li 16, 16
