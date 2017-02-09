@@ -168,6 +168,9 @@ sub clear_vr_registers()
     insn32(0x3ac10020);
     # li r23, 0
     write_mov_ri(23, 0);
+    # zero the xer register
+    # mtxer   r23
+    insn32(0x7ee103a6);
     # std r23, 0(r22)
     insn32(0xfaf60000);
 
