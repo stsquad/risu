@@ -84,8 +84,6 @@ sub write_sxt32($$)
 
 sub write_mov_ri($$)
 {
-    # We always use a MOVW/MOVT pair, for simplicity.
-    # on aarch64, we use a MOVZ/MOVK pair.
     my ($rd, $imm) = @_;
 
     if (($imm >> 16) & 0xffff) {
