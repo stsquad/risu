@@ -167,9 +167,9 @@ sub clear_vr_registers()
     # addi r22, r1, 32
     insn32(0x3ac10020);
     # li r23, 0
-    write_mov_ri(23, 1);
+    write_mov_ri(23, 0);
     # std r23, 0(r22)
-    insn32(0xfaf60000); 
+    insn32(0xfaf60000);
 
     for (my $i = 0; $i < 32; $i++) {
         # vxor i, i, i
