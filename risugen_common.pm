@@ -25,7 +25,8 @@ BEGIN {
     our @ISA = qw(Exporter);
     our @EXPORT = qw(open_bin close_bin set_endian insn32 insn16 bytecount
                    progress_start progress_update progress_end
-                   eval_with_fields);
+                   eval_with_fields is_pow_of_2 sextract ctz
+                   dump_insn_details);
 }
 
 our $bytecount;
@@ -116,6 +117,55 @@ sub eval_with_fields($$$$$) {
         exit(1);
     }
     return $v;
+}
+
+sub is_pow_of_2($)
+{
+    my ($x) = @_;
+    return ($x > 0) && (($x & ($x - 1)) == 0);
+}
+
+# sign-extract from a nbit optionally signed bitfield
+sub sextract($$)
+{
+    my ($field, $nbits) = @_;
+
+    my $sign = $field & (1 << ($nbits - 1));
+    return -$sign + ($field ^ $sign);
+}
+
+sub ctz($)
+{
+    # Count trailing zeros, similar semantic to gcc builtin:
+    # undefined return value if input is zero.
+    my ($in) = @_;
+
+    # XXX should use log2, popcount, ...
+    my $imm = 0;
+    for (my $cnt = $in; $cnt > 1; $cnt >>= 1) {
+        $imm += 1;
+    }
+    return $imm;
+}
+
+sub dump_insn_details($$)
+{
+    # Dump the instruction details for one insn
+    my ($insn, $rec) = @_;
+    print "insn $insn: ";
+    my $insnwidth = $rec->{width};
+    my $fixedbits = $rec->{fixedbits};
+    my $fixedbitmask = $rec->{fixedbitmask};
+    my $constraint = $rec->{blocks}{"constraints"};
+    print sprintf(" insnwidth %d fixedbits %08x mask %08x ", $insnwidth, $fixedbits, $fixedbitmask);
+    if (defined $constraint) {
+        print "constraint $constraint ";
+    }
+    for my $tuple (@{ $rec->{fields} }) {
+        my ($var, $pos, $mask) = @$tuple;
+        print "($var, $pos, " . sprintf("%08x", $mask) . ") ";
+    }
+    print "\n";
 }
 
 1;

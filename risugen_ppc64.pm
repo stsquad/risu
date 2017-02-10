@@ -204,21 +204,6 @@ sub write_memblock_setup()
 # Global used to communicate between align(x) and reg() etc.
 my $alignment_restriction;
 
-sub is_pow_of_2($)
-{
-    my ($x) = @_;
-    return ($x > 0) && (($x & ($x - 1)) == 0);
-}
-
-# sign-extract from a nbit optionally signed bitfield
-sub sextract($$)
-{
-    my ($field, $nbits) = @_;
-
-    my $sign = $field & (1 << ($nbits - 1));
-    return -$sign + ($field ^ $sign);
-}
-
 sub align($)
 {
     my ($a) = @_;

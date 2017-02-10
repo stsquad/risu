@@ -174,15 +174,6 @@ sub write_sxt32($$)
     insn32(0x93407c00 | $rn << 5 | $rd);
 }
 
-# sign-extract from a nbit optionally signed bitfield
-sub sextract($$)
-{
-    my ($field, $nbits) = @_;
-
-    my $sign = $field & (1 << ($nbits - 1));
-    return -$sign + ($field ^ $sign);
-}
-
 sub write_sub_rrr($$$)
 {
     my ($rd, $rn, $rm) = @_;
@@ -512,12 +503,6 @@ sub write_random_register_data($)
     write_risuop($OP_COMPARE);
 }
 
-sub is_pow_of_2($)
-{
-    my ($x) = @_;
-    return ($x > 0) && (($x & ($x - 1)) == 0);
-}
-
 # put PC + offset into a register.
 # this must emit an instruction of 4 bytes.
 sub write_pc_adr($$)
@@ -536,20 +521,6 @@ sub write_pc_adr($$)
         insn32(0xe28f0000 | $rd << 12 | $imm);
 
     }
-}
-
-sub ctz($)
-{
-    # Count trailing zeros, similar semantic to gcc builtin:
-    # undefined return value if input is zero.
-    my ($in) = @_;
-
-    # XXX should use log2, popcount, ...
-    my $imm = 0;
-    for (my $cnt = $in; $cnt > 1; $cnt >>= 1) {
-        $imm += 1;
-    }
-    return $imm;
 }
 
 # clear bits in register to satisfy alignment.
@@ -649,26 +620,6 @@ sub write_set_fpscr($)
     } else {
         write_set_fpscr_arm($fpscr);
     }
-}
-
-sub dump_insn_details($$)
-{
-    # Dump the instruction details for one insn
-    my ($insn, $rec) = @_;
-    print "insn $insn: ";
-    my $insnwidth = $rec->{width};
-    my $fixedbits = $rec->{fixedbits};
-    my $fixedbitmask = $rec->{fixedbitmask};
-    my $constraint = $rec->{blocks}{"constraints"};
-    print sprintf(" insnwidth %d fixedbits %08x mask %08x ", $insnwidth, $fixedbits, $fixedbitmask);
-    if (defined $constraint) {
-        print "constraint $constraint ";
-    }
-    for my $tuple (@{ $rec->{fields} }) {
-        my ($var, $pos, $mask) = @$tuple;
-        print "($var, $pos, " . sprintf("%08x", $mask) . ") ";
-    }
-    print "\n";
 }
 
 # Functions used in memory blocks to handle addressing modes.
