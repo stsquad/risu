@@ -24,7 +24,8 @@ BEGIN {
 
     our @ISA = qw(Exporter);
     our @EXPORT = qw(open_bin close_bin set_endian insn32 insn16 bytecount
-                   progress_start progress_update progress_end);
+                   progress_start progress_update progress_end
+                   eval_with_fields);
 }
 
 our $bytecount;
@@ -93,6 +94,28 @@ sub progress_end()
 {
     print "[" . "-" x $proglen . "]\n";
     $| = 0;
+}
+
+sub eval_with_fields($$$$$) {
+    # Evaluate the given block in an environment with Perl variables
+    # set corresponding to the variable fields for the insn.
+    # Return the result of the eval; we die with a useful error
+    # message in case of syntax error.
+    my ($insnname, $insn, $rec, $blockname, $block) = @_;
+    my $evalstr = "{ ";
+    for my $tuple (@{ $rec->{fields} }) {
+        my ($var, $pos, $mask) = @$tuple;
+        my $val = ($insn >> $pos) & $mask;
+        $evalstr .= "my (\$$var) = $val; ";
+    }
+    $evalstr .= $block;
+    $evalstr .= "}";
+    my $v = eval $evalstr;
+    if ($@) {
+        print "Syntax error detected evaluating $insnname $blockname string:\n$block\n$@";
+        exit(1);
+    }
+    return $v;
 }
 
 1;

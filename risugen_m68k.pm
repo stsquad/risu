@@ -101,28 +101,6 @@ sub write_random_register_data()
     write_risuop($OP_COMPARE);
 }
 
-sub eval_with_fields($$$$$) {
-    # Evaluate the given block in an environment with Perl variables
-    # set corresponding to the variable fields for the insn.
-    # Return the result of the eval; we die with a useful error
-    # message in case of syntax error.
-    my ($insnname, $insn, $rec, $blockname, $block) = @_;
-    my $evalstr = "{ ";
-    for my $tuple (@{ $rec->{fields} }) {
-        my ($var, $pos, $mask) = @$tuple;
-        my $val = ($insn >> $pos) & $mask;
-        $evalstr .= "my (\$$var) = $val; ";
-    }
-    $evalstr .= $block;
-    $evalstr .= "}";
-    my $v = eval $evalstr;
-    if ($@) {
-        print "Syntax error detected evaluating $insnname $blockname string:\n$block\n$@";
-        exit(1);
-    }
-    return $v;
-}
-
 sub gen_one_insn($$)
 {
     # Given an instruction-details array, generate an instruction
