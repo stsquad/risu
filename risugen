@@ -37,36 +37,6 @@ my @not_pattern_re = ();        # exclude pattern
 # Valid block names (keys in blocks hash)
 my %valid_blockname = ( constraints => 1, memory => 1 );
 
-my $lastprog;
-my $proglen;
-my $progmax;
-
-sub progress_start($$)
-{
-    ($proglen, $progmax) = @_;
-    $proglen -= 2; # allow for [] chars
-    $| = 1;        # disable buffering so we can see the meter...
-    print "[" . " " x $proglen . "]\r";
-    $lastprog = 0;
-}
-
-sub progress_update($)
-{
-    # update the progress bar with current progress
-    my ($done) = @_;
-    my $barlen = int($proglen * $done / $progmax);
-    if ($barlen != $lastprog) {
-        $lastprog = $barlen;
-        print "[" . "-" x $barlen . " " x ($proglen - $barlen) . "]\r";
-    }
-}
-
-sub progress_end()
-{
-    print "[" . "-" x $proglen . "]\n";
-    $| = 0;
-}
-
 sub parse_risu_directive($$@)
 {
     # Parse a line beginning with ".", which is a directive used

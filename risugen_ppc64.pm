@@ -372,41 +372,11 @@ sub gen_one_insn($$)
     }
 }
 
-my $lastprog;
-my $proglen;
-my $progmax;
-
-sub progress_start($$)
-{
-    ($proglen, $progmax) = @_;
-    $proglen -= 2; # allow for [] chars
-    $| = 1;        # disable buffering so we can see the meter...
-    print "[" . " " x $proglen . "]\r";
-    $lastprog = 0;
-}
-
-sub progress_update($)
-{
-    # update the progress bar with current progress
-    my ($done) = @_;
-    my $barlen = int($proglen * $done / $progmax);
-    if ($barlen != $lastprog) {
-        $lastprog = $barlen;
-        print "[" . "-" x $barlen . " " x ($proglen - $barlen) . "]\r";
-    }
-}
-
 sub write_risuop($)
 {
     # instr with bits (28:27) == 0 0 are UNALLOCATED
     my ($op) = @_;
     insn32(0x00005af0 | $op);
-}
-
-sub progress_end()
-{
-    print "[" . "-" x $proglen . "]\n";
-    $| = 0;
 }
 
 sub write_test_code($)

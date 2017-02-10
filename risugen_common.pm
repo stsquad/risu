@@ -23,7 +23,8 @@ BEGIN {
     require Exporter;
 
     our @ISA = qw(Exporter);
-    our @EXPORT = qw(open_bin close_bin set_endian insn32 insn16 bytecount);
+    our @EXPORT = qw(open_bin close_bin set_endian insn32 insn16 bytecount
+                   progress_start progress_update progress_end);
 }
 
 our $bytecount;
@@ -61,6 +62,37 @@ sub insn16($)
     my ($insn) = @_;
     print BIN pack($bigendian ? "n" : "v", $insn);
     $bytecount += 2;
+}
+
+# Progress bar implementation
+my $lastprog;
+my $proglen;
+my $progmax;
+
+sub progress_start($$)
+{
+    ($proglen, $progmax) = @_;
+    $proglen -= 2; # allow for [] chars
+    $| = 1;        # disable buffering so we can see the meter...
+    print "[" . " " x $proglen . "]\r";
+    $lastprog = 0;
+}
+
+sub progress_update($)
+{
+    # update the progress bar with current progress
+    my ($done) = @_;
+    my $barlen = int($proglen * $done / $progmax);
+    if ($barlen != $lastprog) {
+        $lastprog = $barlen;
+        print "[" . "-" x $barlen . " " x ($proglen - $barlen) . "]\r";
+    }
+}
+
+sub progress_end()
+{
+    print "[" . "-" x $proglen . "]\n";
+    $| = 0;
 }
 
 1;
