@@ -18,6 +18,8 @@ package risugen_ppc64;
 use strict;
 use warnings;
 
+use risugen_common;
+
 require Exporter;
 
 our @ISA    = qw(Exporter);
@@ -25,29 +27,9 @@ our @EXPORT = qw(write_test_code);
 
 my $periodic_reg_random = 1;
 
-my $bytecount;
 #
 # Maximum alignment restriction permitted for a memory op.
 my $MAXALIGN = 64;
-
-sub open_bin
-{
-    my ($fname) = @_;
-    open(BIN, ">", $fname) or die "can't open %fname: $!";
-    $bytecount = 0;
-}
-
-sub insn32($)
-{
-    my ($insn) = @_;
-    print BIN pack("V", $insn);
-    $bytecount += 4;
-}
-
-sub close_bin
-{
-    close(BIN) or die "can't close output file: $!";
-}
 
 sub write_mov_ri16($$)
 {

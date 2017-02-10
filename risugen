@@ -24,6 +24,7 @@ use Text::Balanced qw { extract_bracketed extract_multiple };
 # same directory as this script.
 use FindBin;
 use lib "$FindBin::Bin";
+use risugen_common;
 
 my %insn_details;
 

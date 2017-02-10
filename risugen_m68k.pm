@@ -15,6 +15,8 @@ package risugen_m68k;
 use strict;
 use warnings;
 
+use risugen_common;
+
 require Exporter;
 
 our @ISA    = qw(Exporter);
@@ -22,36 +24,9 @@ our @EXPORT = qw(write_test_code);
 
 my $periodic_reg_random = 1;
 
-my $bytecount;
 #
 # Maximum alignment restriction permitted for a memory op.
 my $MAXALIGN = 64;
-
-sub open_bin
-{
-    my ($fname) = @_;
-    open(BIN, ">", $fname) or die "can't open %fname: $!";
-    $bytecount = 0;
-}
-
-sub close_bin
-{
-    close(BIN) or die "can't close output file: $!";
-}
-
-sub insn32($)
-{
-    my ($insn) = @_;
-    print BIN pack("N", $insn);
-    $bytecount += 4;
-}
-
-sub insn16($)
-{
-    my ($insn) = @_;
-    print BIN pack("n", $insn);
-    $bytecount += 2;
-}
 
 sub write_risuop($)
 {
@@ -240,6 +215,9 @@ sub write_test_code($)
     my @pattern_re = @{ $params->{ 'pattern_re' } };
     my @not_pattern_re = @{ $params->{ 'not_pattern_re' } };
     my %insn_details = %{ $params->{ 'details' } };
+
+    # Specify the order to use for insn32() and insn16() writes.
+    set_endian(1);
 
     open_bin($outfile);
 

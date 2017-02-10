@@ -19,6 +19,8 @@ package risugen_arm;
 use strict;
 use warnings;
 
+use risugen_common;
+
 require Exporter;
 
 our @ISA    = qw(Exporter);
@@ -41,8 +43,6 @@ my $is_aarch64 = 0; # are we in aarch64 mode?
 my $is_thumb = 0;   # are we currently in Thumb mode?
 my $test_thumb = 0; # should test code be Thumb mode?
 
-my $bytecount;
-
 # Maximum alignment restriction permitted for a memory op.
 my $MAXALIGN = 64;
 
@@ -59,32 +59,6 @@ my $MAXALIGN = 64;
 
 # Valid block names (keys in blocks hash)
 my %valid_blockname = ( constraints => 1, memory => 1 );
-
-sub open_bin
-{
-    my ($fname) = @_;
-    open(BIN, ">", $fname) or die "can't open %fname: $!";
-    $bytecount = 0;
-}
-
-sub close_bin
-{
-    close(BIN) or die "can't close output file: $!";
-}
-
-sub insn32($)
-{
-    my ($insn) = @_;
-    print BIN pack("V", $insn);
-    $bytecount += 4;
-}
-
-sub insn16($)
-{
-    my ($insn) = @_;
-    print BIN pack("v", $insn);
-    $bytecount += 2;
-}
 
 # for thumb only
 sub thumb_align4()
