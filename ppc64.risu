@@ -1029,12 +1029,12 @@ LQ PPC64LE 111000 rtp:5 ra:5 imm:12 0000 \
 !memory { reg_plus_imm($ra, $imm << 4); }
 
 # format:X book:I page:65 v:P1 lswi Load String Word Immediate
-LSWI PPC64LE 011111 rt:5 ra:5 nb:5 10010101010 \
+LSWI PPC64LE 011111 rt:5 ra:5 rb:5 10010101010 \
 !constraints { $ra != 1 && $rb != 1 && $ra != 13 && $rb != 13 && $ra != 0 && $ra != $rb; } \
 !memory { reg_plus_reg($ra, $rb); }
 
 # format:X book:I page:65 v:P1 lswx Load String Word Indexed
-LSWX PPC64LE 011111 rt:5 ra:5 nb:5 10000101010 \
+LSWX PPC64LE 011111 rt:5 ra:5 rb:5 10000101010 \
 !constraints { $ra != 1 && $rb != 1 && $ra != 13 && $rb != 13 && $ra != 0 && $ra != $rb; } \
 !memory { reg_plus_reg($ra, $rb); }
 
@@ -1705,7 +1705,7 @@ STMW PPC64BE 101111 rt:5 ra:5 imm:16 \
 
 # STSWI is not supported in little-endian mode
 # format:X book:I page:66 v:P1 stswi Store String Word Immediate
-STSWI PPC64BE 011111 rs:5 ra:5 nb:5 10110101010 \
+STSWI PPC64BE 011111 rs:5 ra:5 rb:5 10110101010 \
 !constraints { $rs != 1 && $ra != 1 && $rs != 13 && $ra != 13 && $rs != $ra && $ra != 0; } \
 !memory { reg_plus_imm($ra, 0); }
 
