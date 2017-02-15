@@ -15,7 +15,9 @@ include Makefile.in
 
 VPATH=$(SRCDIR)
 
-CFLAGS ?= -g -Wall
+CFLAGS ?= -g
+
+ALL_CFLAGS = -Wall -D_GNU_SOURCE $(CFLAGS) $(EXTRA_CFLAGS)
 
 PROG=risu
 SRCS=risu.c comms.c risu_$(ARCH).c risu_reginfo_$(ARCH).c
@@ -33,13 +35,13 @@ all: $(PROG) $(BINS)
 dump: $(RISU_ASMS)
 
 $(PROG): $(OBJS)
-	$(CC) $(STATIC) $(CFLAGS) -o $@ $^
+	$(CC) $(STATIC) $(ALL_CFLAGS) -o $@ $^
 
 %.risu.asm: %.risu.bin
 	${OBJDUMP} -b binary -m $(ARCH) -D $^ > $@
 
 %.o: %.c $(HDRS)
-	$(CC) $(CPPFLAGS) $(CFLAGS) -o $@ -c $<
+	$(CC) $(CPPFLAGS) $(ALL_CFLAGS) -o $@ -c $<
 
 %_$(ARCH).bin: %_$(ARCH).elf
 	$(OBJCOPY) -O binary $< $@
