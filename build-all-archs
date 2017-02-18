@@ -1,0 +1,40 @@
+#!/bin/sh -e
+#
+# Simple script to build risu for all architectures
+#
+# Copyright (c) 2017 Linaro Limited
+# All rights reserved. This program and the accompanying materials
+# are made available under the terms of the Eclipse Public License v1.0
+# which accompanies this distribution, and is available at
+# http://www.eclipse.org/legal/epl-v10.html
+#
+# Contributors:
+#     Peter Maydell (Linaro) - initial implementation
+
+
+# Debian stretch and Ubuntu Xenial have cross compiler packages for
+# all of these:
+# gcc-arm-linux-gnueabihf gcc-aarch64-linux-gnu gcc-m68k-linux-gnu
+# gcc-powerpc64le-linux-gnu gcc-powerpc64-linux-gnu
+
+program_exists() {
+    command -v "$1" >/dev/null 2>&1
+}
+
+# powerpc64-linux-gnu doesn't work at the moment, so not yet listed.
+for triplet in aarch64-linux-gnu arm-linux-gnueabihf m68k-linux-gnu \
+    powerpc64le-linux-gnu ; do
+
+    if ! program_exists "${triplet}-gcc"; then
+        echo "Skipping ${triplet}: no compiler found"
+        continue
+    fi
+
+    # Do a complete rebuild from scratch, because it's cheap enough.
+    rm -rf build/${triplet}
+    mkdir -p build/${triplet}
+
+    (cd build/${triplet} && CROSS_PREFIX="${triplet}-"  ../../configure)
+    make -C build/${triplet}
+
+done
