@@ -1,5 +1,9 @@
 #!/bin/sh
 # simple risu configure script - Claudio Fontana
+
+# Locate the directory where this configure script is
+SRCDIR="$(cd "$(dirname "$0")"; pwd)"
+
 tmp_dir=`mktemp -d -t risu_configure_check_XXXXXX`
 
 compile() {
@@ -47,6 +51,7 @@ generate_makefilein() {
     echo "OBJCOPY:=${OBJCOPY}" >> $m
     echo "OBJDUMP:=${OBJDUMP}" >> $m
     echo "STATIC:=${STATIC}" >> $m
+    echo "SRCDIR:=${SRCDIR}" >> $m
 
     echo "...done"
 }
@@ -103,6 +108,13 @@ if test "x${ARCH}" = "x"; then
 fi
 
 generate_makefilein
+
+# Are we in a separate build tree? If so, link the Makefile
+# so that 'make' works.
+if test ! -e Makefile; then
+    echo "linking Makefile..."
+    ln -s "${SRCDIR}/Makefile" .
+fi
 
 echo "type 'make' to start the build"
 exit 0
