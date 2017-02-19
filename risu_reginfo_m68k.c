@@ -31,9 +31,9 @@ void reginfo_init(struct reginfo *ri, ucontext_t *uc)
     ri->fpregs.f_psr = uc->uc_mcontext.fpregs.f_psr;
     ri->fpregs.f_fpiaddr = uc->uc_mcontext.fpregs.f_fpiaddr;
     for (i = 0; i < 8; i++) {
-        memcpy(&ri->fpregs.f_fpregs[i * 3],
-               &uc->uc_mcontext.fpregs.f_fpregs[i * 3],
-               3 * sizeof(int));
+        memcpy(ri->fpregs.f_fpregs[i],
+               uc->uc_mcontext.fpregs.f_fpregs[i],
+               sizeof(ri->fpregs.f_fpregs[0]));
     }
 }
 
@@ -64,9 +64,9 @@ int reginfo_is_eq(struct reginfo *m, struct reginfo *a, ucontext_t *uc)
     }
 
     for (i = 0; i < 8; i++) {
-        if (m->fpregs.f_fpregs[i * 3] != a->fpregs.f_fpregs[i * 3] ||
-            m->fpregs.f_fpregs[i * 3 + 1] != a->fpregs.f_fpregs[i * 3 + 1] ||
-            m->fpregs.f_fpregs[i * 3 + 2] != a->fpregs.f_fpregs[i * 3 + 2]) {
+        if (m->fpregs.f_fpregs[i][0] != a->fpregs.f_fpregs[i][0] ||
+            m->fpregs.f_fpregs[i][1] != a->fpregs.f_fpregs[i][1] ||
+            m->fpregs.f_fpregs[i][2] != a->fpregs.f_fpregs[i][2]) {
             return 0;
         }
     }
@@ -93,8 +93,8 @@ void reginfo_dump(struct reginfo *ri, int is_master)
 
     for (i = 0; i < 8; i++) {
         fprintf(stderr, "\tFP%d: %08x %08x %08x\n", i,
-                ri->fpregs.f_fpregs[i * 3], ri->fpregs.f_fpregs[i * 3 + 1],
-                ri->fpregs.f_fpregs[i * 3 + 2]);
+                ri->fpregs.f_fpregs[i][0], ri->fpregs.f_fpregs[i][1],
+                ri->fpregs.f_fpregs[i][2]);
     }
 
     fprintf(stderr, "\n");
@@ -134,15 +134,14 @@ int reginfo_dump_mismatch(struct reginfo *m, struct reginfo *a, FILE *f)
     }
 
     for (i = 0; i < 8; i++) {
-        if (m->fpregs.f_fpregs[i * 3] != a->fpregs.f_fpregs[i * 3] ||
-            m->fpregs.f_fpregs[i * 3 + 1] != a->fpregs.f_fpregs[i * 3 + 1] ||
-            m->fpregs.f_fpregs[i * 3 + 2] != a->fpregs.f_fpregs[i * 3 + 2]) {
+        if (m->fpregs.f_fpregs[i][0] != a->fpregs.f_fpregs[i][0] ||
+            m->fpregs.f_fpregs[i][1] != a->fpregs.f_fpregs[i][1] ||
+            m->fpregs.f_fpregs[i][2] != a->fpregs.f_fpregs[i][2]) {
             fprintf(f, "Mismatch: Register FP%d\n", i);
             fprintf(f, "m: [%08x %08x %08x] != a: [%08x %08x %08x]\n",
-                    m->fpregs.f_fpregs[i * 3], m->fpregs.f_fpregs[i * 3 + 1],
-                    m->fpregs.f_fpregs[i * 3 + 2], a->fpregs.f_fpregs[i * 3],
-                    a->fpregs.f_fpregs[i * 3 + 1],
-                    a->fpregs.f_fpregs[i * 3 + 2]);
+                    m->fpregs.f_fpregs[i][0], m->fpregs.f_fpregs[i][1],
+                    m->fpregs.f_fpregs[i][2], a->fpregs.f_fpregs[i][0],
+                    a->fpregs.f_fpregs[i][1], a->fpregs.f_fpregs[i][2]);
         }
     }
 
