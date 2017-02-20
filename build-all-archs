@@ -37,7 +37,7 @@ for triplet in aarch64-linux-gnu arm-linux-gnueabihf m68k-linux-gnu \
     mkdir -p build/${triplet}
 
     (cd build/${triplet} && CROSS_PREFIX="${triplet}-"  ../../configure)
-    make -C build/${triplet}
+    make -C build/${triplet} EXTRA_CFLAGS=-Werror
 
 done
 
