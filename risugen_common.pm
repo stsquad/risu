@@ -102,8 +102,19 @@ sub eval_with_fields($$$$$) {
     # set corresponding to the variable fields for the insn.
     # Return the result of the eval; we die with a useful error
     # message in case of syntax error.
+    #
+    # At the moment we just evaluate the string in the environment
+    # of the calling package.
+    # What we *ought* to do here is to give the config snippets
+    # their own package, and explicitly import into it only the
+    # functions that we want to be accessible to the config.
+    # That would provide better separation and an explicitly set up
+    # environment that doesn't allow config file code to accidentally
+    # change state it shouldn't have access to, and avoid the need to
+    # use 'caller' to get the package name of our calling function.
     my ($insnname, $insn, $rec, $blockname, $block) = @_;
-    my $evalstr = "{ ";
+    my $calling_package = caller;
+    my $evalstr = "{ package $calling_package; ";
     for my $tuple (@{ $rec->{fields} }) {
         my ($var, $pos, $mask) = @$tuple;
         my $val = ($insn >> $pos) & $mask;
