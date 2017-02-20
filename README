@@ -27,6 +27,21 @@ Most useful is
    (Example: CROSS_PREFIX=arm-linux-gnueabihf- )
 For other possibilities run 'configure --help'.
 
+Building into a separate build tree from the source code is supported:
+    mkdir my-build-dir
+    cd my-build-dir
+    [VAR=VALUE] ... ../configure
+    make
+
+The build directory doesn't need to be inside the source tree;
+just run configure from inside it.
+
+For risu developers: there is a build-all-archs script which
+will automatically configure and build risu for every CPU
+architecture that we support and that you have a cross compiler
+installed for. This is useful for confirming that your changes
+to risu haven't broken anything.
+
 Usage
 -----
 
