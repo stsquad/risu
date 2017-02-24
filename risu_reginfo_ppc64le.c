@@ -50,7 +50,7 @@ void reginfo_init(struct reginfo *ri, ucontext_t *uc)
 }
 
 /* reginfo_is_eq: compare the reginfo structs, returns nonzero if equal */
-int reginfo_is_eq(struct reginfo *m, struct reginfo *a, ucontext_t *uc)
+int reginfo_is_eq(struct reginfo *m, struct reginfo *a)
 {
     int i;
     for (i = 0; i < 32; i++) {
@@ -86,14 +86,6 @@ int reginfo_is_eq(struct reginfo *m, struct reginfo *a, ucontext_t *uc)
                 m->vrregs.vrregs[i][1] != a->vrregs.vrregs[i][1] ||
                 m->vrregs.vrregs[i][2] != a->vrregs.vrregs[i][2] ||
                 m->vrregs.vrregs[i][3] != a->vrregs.vrregs[i][3]) {
-
-            if (uc != NULL && (m->gregs[CCR] & 0x10)) {
-                uc->uc_mcontext.v_regs->vrregs[i][0] = a->vrregs.vrregs[i][0];
-                uc->uc_mcontext.v_regs->vrregs[i][1] = a->vrregs.vrregs[i][1];
-                uc->uc_mcontext.v_regs->vrregs[i][2] = a->vrregs.vrregs[i][2];
-                uc->uc_mcontext.v_regs->vrregs[i][3] = a->vrregs.vrregs[i][3];
-                return 1;
-            }
             return 0;
         }
     }

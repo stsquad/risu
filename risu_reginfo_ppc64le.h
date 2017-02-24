@@ -29,7 +29,7 @@ struct reginfo
 void reginfo_init(struct reginfo *ri, ucontext_t *uc);
 
 /* return 1 if structs are equal, 0 otherwise. */
-int reginfo_is_eq(struct reginfo *r1, struct reginfo *r2, ucontext_t *uc);
+int reginfo_is_eq(struct reginfo *r1, struct reginfo *r2);
 
 /* print reginfo state to a stream */
 void reginfo_dump(struct reginfo *ri, int is_master);

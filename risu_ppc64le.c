@@ -89,7 +89,7 @@ int recv_and_compare_register_info(int sock, void *uc)
         if (recv_data_pkt(sock, &apprentice_ri, sizeof(apprentice_ri))) {
             packet_mismatch = 1;
             resp = 2;
-        } else if (!reginfo_is_eq(&master_ri, &apprentice_ri, uc)) {
+        } else if (!reginfo_is_eq(&master_ri, &apprentice_ri)) {
             resp = 2;
         }
         else if (op == OP_TESTEND) {
@@ -134,7 +134,7 @@ int report_match_status(void)
         fprintf(stderr, "master reginfo:\n");
         reginfo_dump(&master_ri, 0);
     }
-    if (!reginfo_is_eq(&master_ri, &apprentice_ri, NULL)) {
+    if (!reginfo_is_eq(&master_ri, &apprentice_ri)) {
         fprintf(stderr, "mismatch on regs!\n");
         resp = 1;
     }
