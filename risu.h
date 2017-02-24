@@ -57,8 +57,6 @@ struct reginfo;
  */
 int send_register_info(int sock, void *uc);
 
-/* Interface provided by CPU-specific code: */
-
 /* Read register info from the socket and compare it with that from the
  * ucontext. Return 0 for match, 1 for end-of-test, 2 for mismatch.
  * NB: called from a signal handler.
@@ -72,6 +70,8 @@ int recv_and_compare_register_info(int sock, void *uc);
  * and 1 for a mismatch.
  */
 int report_match_status(void);
+
+/* Interface provided by CPU-specific code: */
 
 /* Move the PC past this faulting insn by adjusting ucontext
  */
