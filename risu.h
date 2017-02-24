@@ -37,6 +37,8 @@ extern int test_fp_exc;
 /* The memory block should be this long */
 #define MEMBLOCKLEN 8192
 
+struct reginfo;
+
 /* Interface provided by CPU-specific code: */
 
 /* Send the register information from the struct ucontext down the socket.
@@ -62,5 +64,14 @@ int report_match_status(void);
 /* Move the PC past this faulting insn by adjusting ucontext
  */
 void advance_pc(void *uc);
+
+/* Set the parameter register in a ucontext_t to the specified value.
+ * (32-bit targets can ignore high 32 bits.)
+ * vuc is a ucontext_t* cast to void*.
+ */
+void set_ucontext_paramreg(void *vuc, uint64_t value);
+
+/* Return the value of the parameter register from a reginfo. */
+uint64_t get_reginfo_paramreg(struct reginfo *ri);
 
 #endif /* RISU_H */

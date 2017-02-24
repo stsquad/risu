@@ -25,10 +25,15 @@ void advance_pc(void *vuc)
     uc->uc_mcontext.gregs[R_PC] += 4;
 }
 
-void set_a0(void *vuc, uint32_t a0)
+void set_ucontext_paramreg(void *vuc, uint64_t value)
 {
     ucontext_t *uc = vuc;
-    uc->uc_mcontext.gregs[R_A0] = a0;
+    uc->uc_mcontext.gregs[R_A0] = value;
+}
+
+uint64_t get_reginfo_paramreg(struct reginfo *ri)
+{
+    return ri->gregs[R_A0];
 }
 
 static int get_risuop(uint32_t insn)
@@ -53,10 +58,11 @@ int send_register_info(int sock, void *uc)
     default:
         return send_data_pkt(sock, &ri, sizeof(ri));
     case OP_SETMEMBLOCK:
-        memblock = (void*)ri.gregs[R_A0];
+        memblock = (void *)(uintptr_t)get_reginfo_paramreg(&ri);
         break;
     case OP_GETMEMBLOCK:
-        set_a0(uc, ri.gregs[R_A0] + (uintptr_t)memblock);
+        set_ucontext_paramreg(uc,
+                              get_reginfo_paramreg(&ri) + (uintptr_t)memblock);
         break;
     case OP_COMPAREMEM:
         return send_data_pkt(sock, memblock, MEMBLOCKLEN);
@@ -93,10 +99,11 @@ int recv_and_compare_register_info(int sock, void *uc)
         send_response_byte(sock, resp);
         break;
     case OP_SETMEMBLOCK:
-        memblock = (void*)master_ri.gregs[R_A0];
+        memblock = (void *)(uintptr_t)get_reginfo_paramreg(&master_ri);
         break;
     case OP_GETMEMBLOCK:
-        set_a0(uc, master_ri.gregs[R_A0] + (uintptr_t)memblock);
+        set_ucontext_paramreg(uc, get_reginfo_paramreg(&master_ri) +
+                              (uintptr_t)memblock);
         break;
     case OP_COMPAREMEM:
         mem_used = 1;
