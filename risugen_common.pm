@@ -23,13 +23,13 @@ BEGIN {
     require Exporter;
 
     our @ISA = qw(Exporter);
-    our @EXPORT = qw(open_bin close_bin set_endian insn32 insn16 bytecount
+    our @EXPORT = qw(open_bin close_bin set_endian insn32 insn16 $bytecount
                    progress_start progress_update progress_end
                    eval_with_fields is_pow_of_2 sextract ctz
                    dump_insn_details);
 }
 
-our $bytecount;
+my $bytecount;
 
 my $bigendian = 0;
 
