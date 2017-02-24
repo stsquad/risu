@@ -23,16 +23,4 @@ struct reginfo
     uint32_t fpscr;
 };
 
-/* initialize a reginfo structure with data from uc */
-void reginfo_init(struct reginfo *ri, ucontext_t *uc);
-
-/* returns 1 if structs are equal, zero otherwise */
-int reginfo_is_eq(struct reginfo *r1, struct reginfo *r2);
-
-/* print struct values to a stream, return 0 on stream err, 1 on success */
-int reginfo_dump(struct reginfo *ri, FILE *f);
-
-/* print a detailed mismatch report, return 0 on stream err, 1 on success */
-int reginfo_dump_mismatch(struct reginfo *m, struct reginfo *a, FILE *f);
-
 #endif /* RISU_REGINFO_ARM_H */

@@ -14,6 +14,7 @@
 
 #include <inttypes.h>
 #include <stdint.h>
+#include <ucontext.h>
 
 /* Socket related routines */
 int master_connect(int port);
@@ -78,5 +79,17 @@ uint64_t get_reginfo_paramreg(struct reginfo *ri);
  * or -1 if this was a SIGILL for a non-risuop insn.
  */
 int get_risuop(struct reginfo *ri);
+
+/* initialize structure from a ucontext */
+void reginfo_init(struct reginfo *ri, ucontext_t *uc);
+
+/* return 1 if structs are equal, 0 otherwise. */
+int reginfo_is_eq(struct reginfo *r1, struct reginfo *r2);
+
+/* print reginfo state to a stream, returns 1 on success, 0 on failure */
+int reginfo_dump(struct reginfo *ri, FILE *f);
+
+/* reginfo_dump_mismatch: print mismatch details to a stream, ret nonzero=ok */
+int reginfo_dump_mismatch(struct reginfo *m, struct reginfo *a, FILE *f);
 
 #endif /* RISU_H */
