@@ -38,7 +38,7 @@ void reginfo_init(struct reginfo *ri, ucontext_t *uc)
 }
 
 /* reginfo_is_eq: compare the reginfo structs, returns nonzero if equal */
-int reginfo_is_eq(struct reginfo *m, struct reginfo *a, ucontext_t *uc)
+int reginfo_is_eq(struct reginfo *m, struct reginfo *a)
 {
     int i;
 
