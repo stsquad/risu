@@ -29,7 +29,7 @@ BEGIN {
                    dump_insn_details);
 }
 
-my $bytecount;
+our $bytecount;
 
 my $bigendian = 0;
 
