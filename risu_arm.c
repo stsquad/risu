@@ -64,24 +64,25 @@ uint64_t get_reginfo_paramreg(struct reginfo *ri)
     return ri->gpreg[0];
 }
 
-static int get_risuop(uint32_t insn, int isz)
+int get_risuop(struct reginfo *ri)
 {
    /* Return the risuop we have been asked to do
     * (or -1 if this was a SIGILL for a non-risuop insn)
     */
+   uint32_t insn = ri->faulting_insn;
+   int isz = ri->faulting_insn_size;
    uint32_t op = insn & 0xf;
    uint32_t key = insn & ~0xf;
    uint32_t risukey = (isz == 2) ? 0xdee0 : 0xe7fe5af0;
    return (key != risukey) ? -1 : op;
 }
 
-
 int send_register_info(int sock, void *uc)
 {
    struct reginfo ri;
    int op;
    reginfo_init(&ri, uc);
-   op = get_risuop(ri.faulting_insn, ri.faulting_insn_size);
+   op = get_risuop(&ri);
 
    switch (op)
    {
@@ -119,7 +120,7 @@ int recv_and_compare_register_info(int sock, void *uc)
    int resp = 0, op;
 
    reginfo_init(&master_ri, uc);
-   op = get_risuop(master_ri.faulting_insn, master_ri.faulting_insn_size);
+   op = get_risuop(&master_ri);
 
    switch (op)
    {

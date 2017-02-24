@@ -41,11 +41,12 @@ uint64_t get_reginfo_paramreg(struct reginfo *ri)
     return ri->regs[0];
 }
 
-static int get_risuop(uint32_t insn)
+int get_risuop(struct reginfo *ri)
 {
     /* Return the risuop we have been asked to do
      * (or -1 if this was a SIGILL for a non-risuop insn)
      */
+    uint32_t insn = ri->faulting_insn;
     uint32_t op = insn & 0xf;
     uint32_t key = insn & ~0xf;
     uint32_t risukey = 0x00005af0;
@@ -57,7 +58,7 @@ int send_register_info(int sock, void *uc)
     struct reginfo ri;
     int op;
     reginfo_init(&ri, uc);
-    op = get_risuop(ri.faulting_insn);
+    op = get_risuop(&ri);
 
     switch (op) {
     case OP_COMPARE:
@@ -94,7 +95,7 @@ int recv_and_compare_register_info(int sock, void *uc)
     int resp = 0, op;
 
     reginfo_init(&master_ri, uc);
-    op = get_risuop(master_ri.faulting_insn);
+    op = get_risuop(&master_ri);
 
     switch (op) {
     case OP_COMPARE:

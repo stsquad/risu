@@ -74,4 +74,9 @@ void set_ucontext_paramreg(void *vuc, uint64_t value);
 /* Return the value of the parameter register from a reginfo. */
 uint64_t get_reginfo_paramreg(struct reginfo *ri);
 
+/* Return the risu operation number we have been asked to do,
+ * or -1 if this was a SIGILL for a non-risuop insn.
+ */
+int get_risuop(struct reginfo *ri);
+
 #endif /* RISU_H */
