@@ -53,35 +53,6 @@ int get_risuop(struct reginfo *ri)
     return (key != risukey) ? -1 : op;
 }
 
-int send_register_info(int sock, void *uc)
-{
-    struct reginfo ri;
-    int op;
-    reginfo_init(&ri, uc);
-    op = get_risuop(&ri);
-
-    switch (op) {
-    case OP_COMPARE:
-    case OP_TESTEND:
-    default:
-        /* Do a simple register compare on (a) explicit request
-         * (b) end of test (c) a non-risuop UNDEF
-         */
-        return send_data_pkt(sock, &ri, sizeof(ri));
-    case OP_SETMEMBLOCK:
-        memblock = (void *)get_reginfo_paramreg(&ri);
-       break;
-    case OP_GETMEMBLOCK:
-        set_ucontext_paramreg(uc,
-                              get_reginfo_paramreg(&ri) + (uintptr_t)memblock);
-        break;
-    case OP_COMPAREMEM:
-        return send_data_pkt(sock, memblock, MEMBLOCKLEN);
-        break;
-    }
-    return 0;
-}
-
 /* Read register info from the socket and compare it with that from the
  * ucontext. Return 0 for match, 1 for end-of-test, 2 for mismatch.
  * NB: called from a signal handler.

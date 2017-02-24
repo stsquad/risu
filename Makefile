@@ -17,10 +17,10 @@ VPATH=$(SRCDIR)
 
 CFLAGS ?= -g
 
-ALL_CFLAGS = -Wall -D_GNU_SOURCE $(CFLAGS) $(EXTRA_CFLAGS)
+ALL_CFLAGS = -Wall -D_GNU_SOURCE -DARCH=$(ARCH) $(CFLAGS) $(EXTRA_CFLAGS)
 
 PROG=risu
-SRCS=risu.c comms.c risu_$(ARCH).c risu_reginfo_$(ARCH).c
+SRCS=risu.c comms.c reginfo.c risu_$(ARCH).c risu_reginfo_$(ARCH).c
 HDRS=risu.h
 BINS=test_$(ARCH).bin
 

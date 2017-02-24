@@ -16,6 +16,15 @@
 #include <stdint.h>
 #include <ucontext.h>
 
+/* GCC computed include to pull in the correct risu_reginfo_*.h for
+ * the architecture.
+ */
+#define REGINFO_HEADER2(X) #X
+#define REGINFO_HEADER1(ARCHNAME) REGINFO_HEADER2(risu_reginfo_ ## ARCHNAME.h)
+#define REGINFO_HEADER(ARCH) REGINFO_HEADER1(ARCH)
+
+#include REGINFO_HEADER(ARCH)
+
 /* Socket related routines */
 int master_connect(int port);
 int apprentice_connect(const char *hostname, int port);
@@ -40,13 +49,15 @@ extern int test_fp_exc;
 
 struct reginfo;
 
-/* Interface provided by CPU-specific code: */
+/* Functions operating on reginfo */
 
 /* Send the register information from the struct ucontext down the socket.
  * Return the response code from the master.
  * NB: called from a signal handler.
  */
 int send_register_info(int sock, void *uc);
+
+/* Interface provided by CPU-specific code: */
 
 /* Read register info from the socket and compare it with that from the
  * ucontext. Return 0 for match, 1 for end-of-test, 2 for mismatch.
