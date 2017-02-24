@@ -11,12 +11,7 @@
  *     based on Peter Maydell's risu_arm.c
  *****************************************************************************/
 
-#include <stdio.h>
-#include <ucontext.h>
-#include <string.h>
-
 #include "risu.h"
-#include "risu_reginfo_ppc64le.h"
 
 void advance_pc(void *vuc)
 {

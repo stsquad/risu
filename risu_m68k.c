@@ -6,12 +6,7 @@
  * http://www.eclipse.org/legal/epl-v10.html
  ******************************************************************************/
 
-#include <stdio.h>
-#include <ucontext.h>
-#include <string.h>
-
 #include "risu.h"
-#include "risu_reginfo_m68k.h"
 
 void advance_pc(void *vuc)
 {

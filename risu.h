@@ -15,6 +15,7 @@
 #include <inttypes.h>
 #include <stdint.h>
 #include <ucontext.h>
+#include <stdio.h>
 
 /* GCC computed include to pull in the correct risu_reginfo_*.h for
  * the architecture.
