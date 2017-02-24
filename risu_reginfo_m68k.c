@@ -75,29 +75,30 @@ int reginfo_is_eq(struct reginfo *m, struct reginfo *a, ucontext_t *uc)
 }
 
 /* reginfo_dump: print state to a stream, returns nonzero on success */
-void reginfo_dump(struct reginfo *ri, int is_master)
+int reginfo_dump(struct reginfo *ri, FILE *f)
 {
     int i;
-    if (is_master) {
-        fprintf(stderr, "  pc            \e[1;101;37m0x%08x\e[0m\n",
-                ri->pc);
-    }
-    fprintf(stderr, "\tPC: %08x\n", ri->gregs[R_PC]);
-    fprintf(stderr, "\tPS: %04x\n", ri->gregs[R_PS]);
+    fprintf(f, "  pc            \e[1;101;37m0x%08x\e[0m\n",
+            ri->pc);
+
+    fprintf(f, "\tPC: %08x\n", ri->gregs[R_PC]);
+    fprintf(f, "\tPS: %04x\n", ri->gregs[R_PS]);
 
     for (i = 0; i < 8; i++) {
-        fprintf(stderr, "\tD%d: %8x\tA%d: %8x\n", i, ri->gregs[i],
+        fprintf(f, "\tD%d: %8x\tA%d: %8x\n", i, ri->gregs[i],
                 i, ri->gregs[i + 8]);
     }
 
 
     for (i = 0; i < 8; i++) {
-        fprintf(stderr, "\tFP%d: %08x %08x %08x\n", i,
+        fprintf(f, "\tFP%d: %08x %08x %08x\n", i,
                 ri->fpregs.f_fpregs[i][0], ri->fpregs.f_fpregs[i][1],
                 ri->fpregs.f_fpregs[i][2]);
     }
 
-    fprintf(stderr, "\n");
+    fprintf(f, "\n");
+
+    return !ferror(f);
 }
 
 int reginfo_dump_mismatch(struct reginfo *m, struct reginfo *a, FILE *f)

@@ -93,46 +93,47 @@ int reginfo_is_eq(struct reginfo *m, struct reginfo *a)
 }
 
 /* reginfo_dump: print state to a stream, returns nonzero on success */
-void reginfo_dump(struct reginfo *ri, int is_master)
+int reginfo_dump(struct reginfo *ri, FILE *f)
 {
     int i;
-    if (is_master) {
-        fprintf(stderr, "  faulting insn 0x%x\n", ri->faulting_insn);
-        fprintf(stderr, "  prev insn     0x%x\n", ri->prev_insn);
-        fprintf(stderr, "  prev addr    0x%" PRIx64 "\n\n", ri->nip);
-    }
+
+    fprintf(f, "  faulting insn 0x%x\n", ri->faulting_insn);
+    fprintf(f, "  prev insn     0x%x\n", ri->prev_insn);
+    fprintf(f, "  prev addr    0x%" PRIx64 "\n\n", ri->nip);
 
     for (i = 0; i < 16; i++) {
-        fprintf(stderr, "\tr%2d: %16lx\tr%2d: %16lx\n", i, ri->gregs[i],
+        fprintf(f, "\tr%2d: %16lx\tr%2d: %16lx\n", i, ri->gregs[i],
                 i + 16, ri->gregs[i + 16]);
     }
 
-    fprintf(stderr, "\n");
-    fprintf(stderr, "\tnip    : %16lx\n", ri->gregs[32]);
-    fprintf(stderr, "\tmsr    : %16lx\n", ri->gregs[33]);
-    fprintf(stderr, "\torig r3: %16lx\n", ri->gregs[34]);
-    fprintf(stderr, "\tctr    : %16lx\n", ri->gregs[35]);
-    fprintf(stderr, "\tlnk    : %16lx\n", ri->gregs[36]);
-    fprintf(stderr, "\txer    : %16lx\n", ri->gregs[37]);
-    fprintf(stderr, "\tccr    : %16lx\n", ri->gregs[38]);
-    fprintf(stderr, "\tmq     : %16lx\n", ri->gregs[39]);
-    fprintf(stderr, "\ttrap   : %16lx\n", ri->gregs[40]);
-    fprintf(stderr, "\tdar    : %16lx\n", ri->gregs[41]);
-    fprintf(stderr, "\tdsisr  : %16lx\n", ri->gregs[42]);
-    fprintf(stderr, "\tresult : %16lx\n", ri->gregs[43]);
-    fprintf(stderr, "\tdscr   : %16lx\n\n", ri->gregs[44]);
+    fprintf(f, "\n");
+    fprintf(f, "\tnip    : %16lx\n", ri->gregs[32]);
+    fprintf(f, "\tmsr    : %16lx\n", ri->gregs[33]);
+    fprintf(f, "\torig r3: %16lx\n", ri->gregs[34]);
+    fprintf(f, "\tctr    : %16lx\n", ri->gregs[35]);
+    fprintf(f, "\tlnk    : %16lx\n", ri->gregs[36]);
+    fprintf(f, "\txer    : %16lx\n", ri->gregs[37]);
+    fprintf(f, "\tccr    : %16lx\n", ri->gregs[38]);
+    fprintf(f, "\tmq     : %16lx\n", ri->gregs[39]);
+    fprintf(f, "\ttrap   : %16lx\n", ri->gregs[40]);
+    fprintf(f, "\tdar    : %16lx\n", ri->gregs[41]);
+    fprintf(f, "\tdsisr  : %16lx\n", ri->gregs[42]);
+    fprintf(f, "\tresult : %16lx\n", ri->gregs[43]);
+    fprintf(f, "\tdscr   : %16lx\n\n", ri->gregs[44]);
 
     for (i = 0; i < 16; i++) {
-        fprintf(stderr, "\tf%2d: %.4f\tr%2d: %.4f\n", i, ri->fpregs[i],
+        fprintf(f, "\tf%2d: %.4f\tr%2d: %.4f\n", i, ri->fpregs[i],
                 i + 16, ri->fpregs[i + 16]);
     }
-    fprintf(stderr, "\tfpscr: %f\n\n", ri->fpregs[32]);
+    fprintf(f, "\tfpscr: %f\n\n", ri->fpregs[32]);
 
     for (i = 0; i < 32; i++) {
-        fprintf(stderr, "vr%02d: %8x, %8x, %8x, %8x\n", i,
+        fprintf(f, "vr%02d: %8x, %8x, %8x, %8x\n", i,
                 ri->vrregs.vrregs[i][0], ri->vrregs.vrregs[i][1],
                 ri->vrregs.vrregs[i][2], ri->vrregs.vrregs[i][3]);
     }
+
+    return !ferror(f);
 }
 
 int reginfo_dump_mismatch(struct reginfo *m, struct reginfo *a, FILE *f)

@@ -140,7 +140,7 @@ int report_match_status(void)
         fprintf(stderr, "packet mismatch (probably disagreement "
                 "about UNDEF on load/store)\n");
         fprintf(stderr, "master reginfo:\n");
-        reginfo_dump(&master_ri, 0);
+        reginfo_dump(&master_ri, stderr);
     }
     if (!reginfo_is_eq(&master_ri, &apprentice_ri)) {
         fprintf(stderr, "mismatch on regs!\n");
@@ -156,10 +156,10 @@ int report_match_status(void)
     }
 
     fprintf(stderr, "master reginfo:\n");
-    reginfo_dump(&master_ri, 1);
+    reginfo_dump(&master_ri, stderr);
 
     fprintf(stderr, "apprentice reginfo:\n");
-    reginfo_dump(&apprentice_ri, 0);
+    reginfo_dump(&apprentice_ri, stderr);
 
     reginfo_dump_mismatch(&master_ri, &apprentice_ri, stderr);
     return resp;
