@@ -1,4 +1,4 @@
-#!/bin/sh -e
+#!/bin/bash -e
 #
 # Simple script to build risu for all architectures
 #
@@ -11,6 +11,8 @@
 # Contributors:
 #     Peter Maydell (Linaro) - initial implementation
 
+# So we notice risugen failing even though it's in a pipeline
+set -o pipefail
 
 # Debian stretch and Ubuntu Xenial have cross compiler packages for
 # all of these:
@@ -37,4 +39,15 @@ for triplet in aarch64-linux-gnu arm-linux-gnueabihf m68k-linux-gnu \
     (cd build/${triplet} && CROSS_PREFIX="${triplet}-"  ../../configure)
     make -C build/${triplet}
 
+done
+
+# Now run risugen for all architectures
+mkdir -p build/risuout
+
+for f in *.risu; do
+    echo "Running risugen on $f..."
+    # The grep is a quick hack to avoid flooding the terminal with an
+    # enormous list of patterns. Ideally we should make risugen
+    # have a --quiet option or similar.
+    ./risugen --numinsns 10000 $f build/risuout/$f.out | grep -v '^Generating code using patterns'
 done
