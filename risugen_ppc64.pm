@@ -382,10 +382,6 @@ sub write_test_code($)
     print "Generating code using patterns: @keys...\n";
     progress_start(78, $numinsns);
 
-    #if ($fp_enabled) {
-    #    write_set_fpscr($fpscr);
-    #}
-
     if (grep { defined($insn_details{$_}->{blocks}->{"memory"}) } @keys) {
         write_memblock_setup();
     }
