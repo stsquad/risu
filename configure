@@ -13,7 +13,20 @@
 # Locate the directory where this configure script is
 SRCDIR="$(cd "$(dirname "$0")"; pwd)"
 
-tmp_dir=`mktemp -d -t risu_configure_check_XXXXXX`
+# Temporary directory used for files created by this script.
+# Like autoconf (and like QEMU) we put this directory in the
+# build directory, which means we can just give it a fixed name and
+# blow it away when configure is run, and we don't need to jump
+# through complicated hoops to delete it when configure exits
+# abnormally (it may be useful for debug purposes on an
+# abnormal exit).
+tmp_dir="config-temp"
+rm -rf "$tmp_dir"
+mkdir -p "$tmp_dir"
+if [ $? -ne 0 ]; then
+    echo "ERROR: could not create temporary directory"
+    exit 1
+fi
 
 compile() {
     $CC $CFLAGS -c -o ${1}.o ${1}.c 2>/dev/null
@@ -124,6 +137,8 @@ if test ! -e Makefile; then
     echo "linking Makefile..."
     ln -s "${SRCDIR}/Makefile" .
 fi
+
+rm -r "$tmp_dir"
 
 echo "type 'make' to start the build"
 exit 0
