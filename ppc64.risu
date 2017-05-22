@@ -1451,7 +1451,7 @@ RLDCLd PPC64LE 011110 rs:5 ra:5 rb:5 mb:6 10001 \
 !constraints { $rs != 1 && $ra != 1 && $rb != 1 && $rs != 13 && $ra != 13 && $rb != 13; }
 
 # format:MDS book:I page:103 PPC SR rldcr Rotate Left Dword then Clear Right
-RLCDR PPC64LE 011110 rs:5 ra:5 rb:5 mb:6 10010 \
+RLDCR PPC64LE 011110 rs:5 ra:5 rb:5 mb:6 10010 \
 !constraints { $rs != 1 && $ra != 1 && $rb != 1 && $rs != 13 && $ra != 13 && $rb != 13; }
 # format:MDS book:I page:103 PPC SR rldcr Rotate Left Dword then Clear Right
 RLDCRd PPC64LE 011110 rs:5 ra:5 rb:5 mb:6 10011 \
@@ -1472,17 +1472,17 @@ RLDICLd PPC64LE 011110 rs:5 ra:5 sh:5 mb:6 000 sha:1 1 \
 !constraints { $rs != 1 && $ra != 1 && $rs != 13 && $ra != 13; }
 
 # format:MD book:I page:105 PPC SR rldicr[.] Rotate Left Dword Immediate then Clear Right
-RLDICR PPC64LE 011110 rs:5 ra:5 rb:5 me:6 00010 \
+RLDICR PPC64LE 011110 rs:5 ra:5 sh:5 me:6 001 sha:1 0 \
 !constraints { $rs != 1 && $ra != 1 && $rb != 1 && $rs != 13 && $ra != 13 && $rb != 13; }
 # format:MD book:I page:105 PPC SR rldicr[.] Rotate Left Dword Immediate then Clear Right
-RLDICRd PPC64LE 011110 rs:5 ra:5 rb:5 me:6 00011 \
+RLDICRd PPC64LE 011110 rs:5 ra:5 sh:5 me:6 001 sha:1 1 \
 !constraints { $rs != 1 && $ra != 1 && $rb != 1 && $rs != 13 && $ra != 13 && $rb != 13; }
 
 # format:MD book:I page:105 PPC SR rldimi[.] Rotate Left Dword Immediate then Mask Insert
-RLDIMI PPC64LE 011110 rs:5 ra:5 rb:5 me:6 00110 \
+RLDIMI PPC64LE 011110 rs:5 ra:5 sh:5 me:6 011 sha:1 0 \
 !constraints { $rs != 1 && $ra != 1 && $rb != 1 && $rs != 13 && $ra != 13 && $rb != 13; }
 # format:MD book:I page:105 PPC SR rldimi[.] Rotate Left Dword Immediate then Mask Insert
-RLDIMId PPC64LE 011110 rs:5 ra:5 rb:5 me:6 00111 \
+RLDIMId PPC64LE 011110 rs:5 ra:5 sh:5 me:6 011 sha:1 1 \
 !constraints { $rs != 1 && $ra != 1 && $rb != 1 && $rs != 13 && $ra != 13 && $rb != 13; }
 
 # format:M book:I page:102 v:P1 SR rlwimi[.] Rotate Left Word Immediate then Mask Insert
