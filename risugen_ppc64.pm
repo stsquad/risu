@@ -99,6 +99,29 @@ sub write_mov_ri64($$)
     insn32((0x3e << 26) | (20 << 21) | (1 << 16) | 0x10);
 }
 
+sub write_mov_ri128($$$$)
+{
+    my ($imhh, $imh, $iml, $imll) = @_;
+
+    # store the lowest 32 bits
+    write_mov_ri32(20, $imll);
+    # stw r20, 16(r1)
+    insn32((0x24 << 26) | (20 << 21) | (1 << 16) | 0x10);
+    # store the lower 32 bits
+    write_mov_ri32(20, $iml);
+    # stw r20, 20(r1)
+    insn32((0x24 << 26) | (20 << 21) | (1 << 16) | 0x14);
+    # store the higher 32 bits
+    write_mov_ri32(20, $imh);
+    # stw r20, 24(r1)
+    insn32((0x24 << 26) | (20 << 21) | (1 << 16) | 0x18);
+    # store the highest 32 bits
+    write_mov_ri32(20, $imhh);
+    # stw r20, 28(r1)
+    insn32((0x24 << 26) | (20 << 21) | (1 << 16) | 0x1c);
+
+}
+
 sub write_random_ppc64_fpdata()
 {
     for (my $i = 0; $i < 32; $i++) {
@@ -106,22 +129,18 @@ sub write_random_ppc64_fpdata()
         write_mov_ri64(rand(0xfffff), rand(0xfffff));
         # since the EA is r1+16, load such value in FP reg
         insn32((0x32 << 26) | ($i << 21) | (0x1 << 16) | 0x10);
-        insn32((0x39 << 26) | ($i << 21) | (0x1 << 16) | 0x12);
-
     }
 }
 
-sub write_random_ppc64_fpdata_i()
+sub write_random_ppc64_vrdata()
 {
-    # get an space from the stack
-    insn32(0x3ac10020); # addi r22, r1, 32
-    insn32(0x3ee03ff0); # lis r23, 0x3ff0
-    insn32(0x3af70000); # addi r23, r23, 0
-    insn32(0xfaf60000); # std r23, 0(r22)
-
     for (my $i = 0; $i < 32; $i++) {
-        # lfd f$i, 0(r22)
-        insn32((0x32 << 26 | $i << 21 | 0x16 << 16));
+        # load a random doubleword value at r0
+        write_mov_ri128(rand(0xffff), rand(0xffff), rand(0xfffff), rand(0xfffff));
+        # li r0, 16
+        write_mov_ri16(0, 0x10);
+        # lvx vr$i, r1, r0
+        insn32((0x1f << 26) | ($i << 21) | (0x1 << 16) | 0x2ce);
     }
 }
 
@@ -172,6 +191,7 @@ sub write_random_register_data($)
 
     clear_vr_registers();
 
+    write_random_ppc64_vrdata();
     if ($fp_enabled) {
         # load floating point / SIMD registers
         write_random_ppc64_fpdata();
