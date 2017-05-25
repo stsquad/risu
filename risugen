@@ -264,6 +264,7 @@ Valid options:
                    a general set you have excluded.
      --no-fp      : disable floating point: no fp init, randomization etc.
                    Useful to test before support for FP is available.
+    --be         : generate instructions in Big-Endian byte order (ppc64 only).
     --help       : print this message
 EOT
 }
@@ -274,6 +275,7 @@ sub main()
     my $condprob = 0;
     my $fpscr = 0;
     my $fp_enabled = 1;
+    my $big_endian = 0;
     my ($infile, $outfile);
 
     GetOptions( "help" => sub { usage(); exit(0); },
@@ -287,6 +289,7 @@ sub main()
                         die "Value \"$condprob\" invalid for option condprob (must be between 0 and 1)\n";
                     }
                 },
+                "be" => sub { $big_endian = 1; },
                 "no-fp" => sub { $fp_enabled = 0; },
         ) or return 1;
     # allow "--pattern re,re" and "--pattern re --pattern re"
@@ -317,7 +320,8 @@ sub main()
         'not_pattern_re' => \@not_pattern_re,
         'details' => \%insn_details,
         'arch' => $full_arch[0],
-        'subarch' => $full_arch[1] || ''
+        'subarch' => $full_arch[1] || '',
+        'bigendian' => $big_endian
     );
 
     write_test_code(\%params);

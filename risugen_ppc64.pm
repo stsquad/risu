@@ -375,6 +375,10 @@ sub write_test_code($)
     my @not_pattern_re = @{ $params->{ 'not_pattern_re' } };
     my %insn_details = %{ $params->{ 'details' } };
 
+    if ($params->{ 'bigendian' } eq 1) {
+        set_endian(1);
+    }
+
     open_bin($outfile);
 
     # convert from probability that insn will be conditional to
