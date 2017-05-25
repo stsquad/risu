@@ -51,7 +51,7 @@ guess_arch() {
     elif check_define __aarch64__ ; then
         ARCH="aarch64"
     elif check_define __powerpc64__ ; then
-        ARCH="ppc64le"
+        ARCH="ppc64"
     else
         echo "This cpu is not supported by risu. Try -h. " >&2
         exit 1
@@ -123,9 +123,6 @@ OBJDUMP="${OBJDUMP-${CROSS_PREFIX}objdump}"
 
 if test "x${ARCH}" = "x"; then
     guess_arch
-elif test "x${ARCH}" = "xppc64"; then
-    # ppc64 and ppc64le uses the same C source code
-    ARCH="ppc64le"
 fi
 
 generate_makefilein

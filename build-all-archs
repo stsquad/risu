@@ -25,7 +25,7 @@ program_exists() {
 
 # powerpc64-linux-gnu doesn't work at the moment, so not yet listed.
 for triplet in aarch64-linux-gnu arm-linux-gnueabihf m68k-linux-gnu \
-    powerpc64le-linux-gnu ; do
+    powerpc64le-linux-gnu powerpc64-linux-gnu ; do
 
     if ! program_exists "${triplet}-gcc"; then
         echo "Skipping ${triplet}: no compiler found"

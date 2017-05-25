@@ -17,7 +17,7 @@
 #include <math.h>
 
 #include "risu.h"
-#include "risu_reginfo_ppc64le.h"
+#include "risu_reginfo_ppc64.h"
 
 #define XER 37
 #define CCR 38
