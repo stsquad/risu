@@ -33,3 +33,8 @@ int get_risuop(struct reginfo *ri)
     uint32_t risukey = 0x4afc7000;
     return (key != risukey) ? -1 : op;
 }
+
+uintptr_t get_pc(struct reginfo *ri)
+{
+    return ri->gregs[R_PC];
+}
