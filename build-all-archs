@@ -18,6 +18,7 @@ usage() {
 
 	Options include:
 	    --use-docker[=tags]    use docker cross compile
+            --static               build a static binary
 
         If specifying docker the default will be to use the any
         qemu:debian-FOO-cross targets available on your system.
@@ -41,6 +42,9 @@ while [[ "$1" = -* ]]; do
 	        docker_tags="$arg"
             fi
 	    ;;
+        --static)
+            CONF="--static"
+            ;;
 	--help)
 	    usage
 	    ;;
@@ -88,7 +92,7 @@ for triplet in aarch64-linux-gnu arm-linux-gnueabihf m68k-linux-gnu \
     rm -rf build/${triplet}
     mkdir -p build/${triplet}
 
-    CONFIGURE="cd build/${triplet} && CROSS_PREFIX="${triplet}-"  ../../configure"
+    CONFIGURE="cd build/${triplet} && CROSS_PREFIX=${triplet}-  ../../configure ${CONF}"
     MAKE="make -C build/${triplet} EXTRA_CFLAGS=-Werror"
 
     if [ -z "$use_docker_tag" ]; then
