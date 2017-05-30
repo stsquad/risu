@@ -51,6 +51,12 @@ extern int ismaster;
 
 struct reginfo;
 
+typedef struct
+{
+   uintptr_t pc;
+   uint32_t risu_op;
+} trace_header_t;
+
 /* Functions operating on reginfo */
 
 /* To keep the read/write logic from multiplying across all arches
@@ -101,6 +107,9 @@ uint64_t get_reginfo_paramreg(struct reginfo *ri);
  * or -1 if this was a SIGILL for a non-risuop insn.
  */
 int get_risuop(struct reginfo *ri);
+
+/* Return the PC from a reginfo */
+uintptr_t get_pc(struct reginfo *ri);
 
 /* initialize structure from a ucontext */
 void reginfo_init(struct reginfo *ri, ucontext_t *uc);
