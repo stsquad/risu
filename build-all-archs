@@ -14,6 +14,38 @@
 # So we notice risugen failing even though it's in a pipeline
 set -o pipefail
 
+# Simple usage
+usage() {
+    cat <<-EOF
+        Usage: $0 [options]
+
+        Options include:
+            --static               build a static binary
+
+EOF
+    exit 1
+}
+
+while [[ "$1" = -* ]]; do
+    opt="$1"; shift
+    arg=
+    if [[ "$opt" = *=* ]]; then
+        arg="${opt#*=}"
+        opt="${opt%%=*}"
+    fi
+    case "$opt" in
+        --static)
+            CONF="--static"
+            ;;
+        --help)
+            usage
+            ;;
+        *)
+            usage
+            ;;
+    esac
+done
+
 # Debian stretch and Ubuntu Xenial have cross compiler packages for
 # all of these:
 # gcc-arm-linux-gnueabihf gcc-aarch64-linux-gnu gcc-m68k-linux-gnu
@@ -36,7 +68,7 @@ for triplet in aarch64-linux-gnu arm-linux-gnueabihf m68k-linux-gnu \
     rm -rf build/${triplet}
     mkdir -p build/${triplet}
 
-    (cd build/${triplet} && CROSS_PREFIX="${triplet}-"  ../../configure)
+    (cd build/${triplet} && CROSS_PREFIX="${triplet}-"  ../../configure ${CONF})
     make -C build/${triplet} EXTRA_CFLAGS=-Werror
 
 done
