@@ -47,9 +47,28 @@ void report_test_status(void *pc)
    }
 }
 
+/* Master functions */
+
+int read_sock(void *ptr, size_t bytes)
+{
+   return recv_data_pkt(master_socket, ptr, bytes);
+}
+
+void respond_sock(int r)
+{
+   send_response_byte(master_socket, r);
+}
+
+/* Apprentice function */
+
+int write_sock(void *ptr, size_t bytes)
+{
+   return send_data_pkt(apprentice_socket, ptr, bytes);
+}
+
 void master_sigill(int sig, siginfo_t *si, void *uc)
 {
-   switch (recv_and_compare_register_info(master_socket, uc))
+   switch (recv_and_compare_register_info(read_sock, respond_sock, uc))
    {
       case 0:
          /* match OK */
@@ -63,7 +82,7 @@ void master_sigill(int sig, siginfo_t *si, void *uc)
 
 void apprentice_sigill(int sig, siginfo_t *si, void *uc)
 {
-   switch (send_register_info(apprentice_socket, uc))
+   switch (send_register_info(write_sock, uc))
    {
       case 0:
          /* match OK */

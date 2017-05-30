@@ -21,33 +21,35 @@ uint8_t apprentice_memblock[MEMBLOCKLEN];
 static int mem_used = 0;
 static int packet_mismatch = 0;
 
-int send_register_info(int sock, void *uc)
+int send_register_info(write_fn write_fn, void *uc)
 {
-    struct reginfo ri;
-    int op;
-    reginfo_init(&ri, uc);
-    op = get_risuop(&ri);
+   struct reginfo ri;
+   int op;
+   reginfo_init(&ri, uc);
+   op = get_risuop(&ri);
 
-    switch (op) {
-    case OP_COMPARE:
-    case OP_TESTEND:
-    default:
-        /* Do a simple register compare on (a) explicit request
-         * (b) end of test (c) a non-risuop UNDEF
-         */
-        return send_data_pkt(sock, &ri, sizeof(ri));
-    case OP_SETMEMBLOCK:
-        memblock = (void *)(uintptr_t)get_reginfo_paramreg(&ri);
-       break;
-    case OP_GETMEMBLOCK:
-        set_ucontext_paramreg(uc,
-                              get_reginfo_paramreg(&ri) + (uintptr_t)memblock);
-        break;
-    case OP_COMPAREMEM:
-        return send_data_pkt(sock, memblock, MEMBLOCKLEN);
-        break;
-    }
-    return 0;
+   switch (op) {
+      case OP_TESTEND:
+         write_fn(&ri, sizeof(ri));
+         return 1;
+      case OP_SETMEMBLOCK:
+         memblock = (void *)(uintptr_t)get_reginfo_paramreg(&ri);
+         break;
+      case OP_GETMEMBLOCK:
+         set_ucontext_paramreg(uc,
+                               get_reginfo_paramreg(&ri) + (uintptr_t)memblock);
+         break;
+      case OP_COMPAREMEM:
+         return write_fn(memblock, MEMBLOCKLEN);
+         break;
+      case OP_COMPARE:
+      default:
+         /* Do a simple register compare on (a) explicit request
+          * (b) end of test (c) a non-risuop UNDEF
+          */
+         return write_fn(&ri, sizeof(ri));
+   }
+   return 0;
 }
 
 /* Read register info from the socket and compare it with that from the
@@ -58,54 +60,52 @@ int send_register_info(int sock, void *uc)
  * that says whether it is register or memory data, so if the two
  * sides get out of sync then we will fail obscurely.
  */
-int recv_and_compare_register_info(int sock, void *uc)
+int recv_and_compare_register_info(read_fn read_fn, respond_fn resp_fn, void *uc)
 {
-    int resp = 0, op;
+   int resp = 0, op;
 
-    reginfo_init(&master_ri, uc);
-    op = get_risuop(&master_ri);
+   reginfo_init(&master_ri, uc);
+   op = get_risuop(&master_ri);
 
-    switch (op) {
-    case OP_COMPARE:
-    case OP_TESTEND:
-    default:
-        /* Do a simple register compare on (a) explicit request
-         * (b) end of test (c) a non-risuop UNDEF
-         */
-        if (recv_data_pkt(sock, &apprentice_ri, sizeof(apprentice_ri))) {
+   switch (op) {
+      case OP_COMPARE:
+      case OP_TESTEND:
+      default:
+         /* Do a simple register compare on (a) explicit request
+          * (b) end of test (c) a non-risuop UNDEF
+          */
+         if (read_fn(&apprentice_ri, sizeof(apprentice_ri))) {
             packet_mismatch = 1;
             resp = 2;
-
-        } else if (!reginfo_is_eq(&master_ri, &apprentice_ri)) {
+         } else if (!reginfo_is_eq(&master_ri, &apprentice_ri)) {
             /* register mismatch */
             resp = 2;
-
-        } else if (op == OP_TESTEND) {
+         } else if (op == OP_TESTEND) {
             resp = 1;
-        }
-        send_response_byte(sock, resp);
-        break;
+         }
+         resp_fn(resp);
+         break;
       case OP_SETMEMBLOCK:
-          memblock = (void *)(uintptr_t)get_reginfo_paramreg(&master_ri);
-          break;
+         memblock = (void *)(uintptr_t)get_reginfo_paramreg(&master_ri);
+         break;
       case OP_GETMEMBLOCK:
-          set_ucontext_paramreg(uc, get_reginfo_paramreg(&master_ri) +
-                                (uintptr_t)memblock);
-          break;
+         set_ucontext_paramreg(uc, get_reginfo_paramreg(&master_ri) +
+                               (uintptr_t)memblock);
+         break;
       case OP_COMPAREMEM:
          mem_used = 1;
-         if (recv_data_pkt(sock, apprentice_memblock, MEMBLOCKLEN)) {
-             packet_mismatch = 1;
-             resp = 2;
+         if (read_fn(apprentice_memblock, MEMBLOCKLEN)) {
+            packet_mismatch = 1;
+            resp = 2;
          } else if (memcmp(memblock, apprentice_memblock, MEMBLOCKLEN) != 0) {
-             /* memory mismatch */
-             resp = 2;
+            /* memory mismatch */
+            resp = 2;
          }
-         send_response_byte(sock, resp);
+         resp_fn(resp);
          break;
    }
 
-    return resp;
+   return resp;
 }
 
 /* Print a useful report on the status of the last comparison
