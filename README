@@ -42,6 +42,15 @@ architecture that we support and that you have a cross compiler
 installed for. This is useful for confirming that your changes
 to risu haven't broken anything.
 
+Coding Style
+------------
+
+risu follows the same coding style as the QEMU project, namely 4
+spaces (no tabs) for indentation and the One True Brace Style variant
+of K&R. The source tree includes a .dir-locals.el for Emacs users that
+will set this automatically. Other editors are available.
+
+
 Usage
 -----
 
