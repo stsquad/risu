@@ -15,7 +15,7 @@
 
 void advance_pc(void *vuc)
 {
-    ucontext_t *uc = (ucontext_t*)vuc;
+    ucontext_t *uc = (ucontext_t *) vuc;
     uc->uc_mcontext.regs->nip += 4;
 }
 

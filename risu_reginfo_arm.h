@@ -13,8 +13,7 @@
 #ifndef RISU_REGINFO_ARM_H
 #define RISU_REGINFO_ARM_H
 
-struct reginfo
-{
+struct reginfo {
     uint64_t fpregs[32];
     uint32_t faulting_insn;
     uint32_t faulting_insn_size;

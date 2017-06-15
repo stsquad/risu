@@ -10,7 +10,7 @@
 
 void advance_pc(void *vuc)
 {
-    ucontext_t *uc = (ucontext_t*)vuc;
+    ucontext_t *uc = (ucontext_t *) vuc;
     uc->uc_mcontext.gregs[R_PC] += 4;
 }
 

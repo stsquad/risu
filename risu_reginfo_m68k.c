@@ -20,7 +20,7 @@ void reginfo_init(struct reginfo *ri, ucontext_t *uc)
     int i;
     memset(ri, 0, sizeof(*ri));
 
-    ri->faulting_insn = *((uint32_t *)uc->uc_mcontext.gregs[R_PC]);
+    ri->faulting_insn = *((uint32_t *) uc->uc_mcontext.gregs[R_PC]);
     ri->pc = uc->uc_mcontext.gregs[R_PC] - image_start_address;
 
     for (i = 0; i < NGREG; i++) {
@@ -78,8 +78,7 @@ int reginfo_is_eq(struct reginfo *m, struct reginfo *a)
 int reginfo_dump(struct reginfo *ri, FILE *f)
 {
     int i;
-    fprintf(f, "  pc            \e[1;101;37m0x%08x\e[0m\n",
-            ri->pc);
+    fprintf(f, "  pc            \e[1;101;37m0x%08x\e[0m\n", ri->pc);
 
     fprintf(f, "\tPC: %08x\n", ri->gregs[R_PC]);
     fprintf(f, "\tPS: %04x\n", ri->gregs[R_PS]);
@@ -101,14 +100,14 @@ int reginfo_dump(struct reginfo *ri, FILE *f)
     return !ferror(f);
 }
 
-int reginfo_dump_mismatch(struct reginfo *m, struct reginfo *a, FILE *f)
+int reginfo_dump_mismatch(struct reginfo *m, struct reginfo *a, FILE * f)
 {
     int i;
 
     if (m->gregs[R_PS] != a->gregs[R_PS]) {
-            fprintf(f, "Mismatch: Register PS\n");
-            fprintf(f, "master: [%x] - apprentice: [%x]\n",
-                    m->gregs[R_PS], a->gregs[R_PS]);
+        fprintf(f, "Mismatch: Register PS\n");
+        fprintf(f, "master: [%x] - apprentice: [%x]\n",
+                m->gregs[R_PS], a->gregs[R_PS]);
     }
 
     for (i = 0; i < 16; i++) {
@@ -116,9 +115,10 @@ int reginfo_dump_mismatch(struct reginfo *m, struct reginfo *a, FILE *f)
             continue;
         }
         if (m->gregs[i] != a->gregs[i]) {
-            fprintf(f, "Mismatch: Register %c%d\n", i < 8 ? 'D' : 'A', i % 8);
-            fprintf(f, "master: [%x] - apprentice: [%x]\n",
-                    m->gregs[i], a->gregs[i]);
+            fprintf(f, "Mismatch: Register %c%d\n", i < 8 ? 'D' : 'A',
+                    i % 8);
+            fprintf(f, "master: [%x] - apprentice: [%x]\n", m->gregs[i],
+                    a->gregs[i]);
         }
     }
 

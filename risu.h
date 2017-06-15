@@ -7,7 +7,7 @@
  *
  * Contributors:
  *     Peter Maydell (Linaro) - initial implementation
- *******************************************************************************/
+ ******************************************************************************/
 
 #ifndef RISU_H
 #define RISU_H
@@ -99,7 +99,7 @@ void reginfo_init(struct reginfo *ri, ucontext_t *uc);
 int reginfo_is_eq(struct reginfo *r1, struct reginfo *r2);
 
 /* print reginfo state to a stream, returns 1 on success, 0 on failure */
-int reginfo_dump(struct reginfo *ri, FILE *f);
+int reginfo_dump(struct reginfo *ri, FILE * f);
 
 /* reginfo_dump_mismatch: print mismatch details to a stream, ret nonzero=ok */
 int reginfo_dump_mismatch(struct reginfo *m, struct reginfo *a, FILE *f);
