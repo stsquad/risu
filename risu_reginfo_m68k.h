@@ -9,8 +9,7 @@
 #ifndef RISU_REGINFO_M68K_H
 #define RISU_REGINFO_M68K_H
 
-struct reginfo
-{
+struct reginfo {
     uint32_t faulting_insn;
     uint32_t pc;
     gregset_t gregs;

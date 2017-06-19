@@ -18,8 +18,8 @@ struct reginfo master_ri, apprentice_ri;
 
 uint8_t apprentice_memblock[MEMBLOCKLEN];
 
-static int mem_used = 0;
-static int packet_mismatch = 0;
+static int mem_used;
+static int packet_mismatch;
 
 int send_register_info(int sock, void *uc)
 {
@@ -37,11 +37,12 @@ int send_register_info(int sock, void *uc)
          */
         return send_data_pkt(sock, &ri, sizeof(ri));
     case OP_SETMEMBLOCK:
-        memblock = (void *)(uintptr_t)get_reginfo_paramreg(&ri);
-       break;
+        memblock = (void *) (uintptr_t) get_reginfo_paramreg(&ri);
+        break;
     case OP_GETMEMBLOCK:
         set_ucontext_paramreg(uc,
-                              get_reginfo_paramreg(&ri) + (uintptr_t)memblock);
+                              get_reginfo_paramreg(&ri) +
+                              (uintptr_t) memblock);
         break;
     case OP_COMPAREMEM:
         return send_data_pkt(sock, memblock, MEMBLOCKLEN);
@@ -85,25 +86,25 @@ int recv_and_compare_register_info(int sock, void *uc)
         }
         send_response_byte(sock, resp);
         break;
-      case OP_SETMEMBLOCK:
-          memblock = (void *)(uintptr_t)get_reginfo_paramreg(&master_ri);
-          break;
-      case OP_GETMEMBLOCK:
-          set_ucontext_paramreg(uc, get_reginfo_paramreg(&master_ri) +
-                                (uintptr_t)memblock);
-          break;
-      case OP_COMPAREMEM:
-         mem_used = 1;
-         if (recv_data_pkt(sock, apprentice_memblock, MEMBLOCKLEN)) {
-             packet_mismatch = 1;
-             resp = 2;
-         } else if (memcmp(memblock, apprentice_memblock, MEMBLOCKLEN) != 0) {
-             /* memory mismatch */
-             resp = 2;
-         }
-         send_response_byte(sock, resp);
-         break;
-   }
+    case OP_SETMEMBLOCK:
+        memblock = (void *) (uintptr_t) get_reginfo_paramreg(&master_ri);
+        break;
+    case OP_GETMEMBLOCK:
+        set_ucontext_paramreg(uc, get_reginfo_paramreg(&master_ri) +
+                              (uintptr_t) memblock);
+        break;
+    case OP_COMPAREMEM:
+        mem_used = 1;
+        if (recv_data_pkt(sock, apprentice_memblock, MEMBLOCKLEN)) {
+            packet_mismatch = 1;
+            resp = 2;
+        } else if (memcmp(memblock, apprentice_memblock, MEMBLOCKLEN) != 0) {
+            /* memory mismatch */
+            resp = 2;
+        }
+        send_response_byte(sock, resp);
+        break;
+    }
 
     return resp;
 }
@@ -116,36 +117,37 @@ int recv_and_compare_register_info(int sock, void *uc)
  */
 int report_match_status(void)
 {
-   int resp = 0;
-   fprintf(stderr, "match status...\n");
-   if (packet_mismatch) {
-       fprintf(stderr, "packet mismatch (probably disagreement "
-               "about UNDEF on load/store)\n");
-       /* We don't have valid reginfo from the apprentice side
-        * so stop now rather than printing anything about it.
-        */
-       fprintf(stderr, "master reginfo:\n");
-       reginfo_dump(&master_ri, stderr);
-       return 1;
-   }
-   if (!reginfo_is_eq(&master_ri, &apprentice_ri)) {
-       fprintf(stderr, "mismatch on regs!\n");
-       resp = 1;
-   }
-   if (mem_used && memcmp(memblock, &apprentice_memblock, MEMBLOCKLEN) != 0) {
-       fprintf(stderr, "mismatch on memory!\n");
-       resp = 1;
-   }
-   if (!resp) {
-       fprintf(stderr, "match!\n");
-       return 0;
-   }
+    int resp = 0;
+    fprintf(stderr, "match status...\n");
+    if (packet_mismatch) {
+        fprintf(stderr, "packet mismatch (probably disagreement "
+                "about UNDEF on load/store)\n");
+        /* We don't have valid reginfo from the apprentice side
+         * so stop now rather than printing anything about it.
+         */
+        fprintf(stderr, "master reginfo:\n");
+        reginfo_dump(&master_ri, stderr);
+        return 1;
+    }
+    if (!reginfo_is_eq(&master_ri, &apprentice_ri)) {
+        fprintf(stderr, "mismatch on regs!\n");
+        resp = 1;
+    }
+    if (mem_used
+        && memcmp(memblock, &apprentice_memblock, MEMBLOCKLEN) != 0) {
+        fprintf(stderr, "mismatch on memory!\n");
+        resp = 1;
+    }
+    if (!resp) {
+        fprintf(stderr, "match!\n");
+        return 0;
+    }
 
-   fprintf(stderr, "master reginfo:\n");
-   reginfo_dump(&master_ri, stderr);
-   fprintf(stderr, "apprentice reginfo:\n");
-   reginfo_dump(&apprentice_ri, stderr);
+    fprintf(stderr, "master reginfo:\n");
+    reginfo_dump(&master_ri, stderr);
+    fprintf(stderr, "apprentice reginfo:\n");
+    reginfo_dump(&apprentice_ri, stderr);
 
-   reginfo_dump_mismatch(&master_ri, &apprentice_ri, stderr);
-   return resp;
+    reginfo_dump_mismatch(&master_ri, &apprentice_ri, stderr);
+    return resp;
 }

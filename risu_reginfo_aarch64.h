@@ -13,8 +13,7 @@
 #ifndef RISU_REGINFO_AARCH64_H
 #define RISU_REGINFO_AARCH64_H
 
-struct reginfo
-{
+struct reginfo {
     uint64_t fault_address;
     uint64_t regs[31];
     uint64_t sp;

@@ -14,8 +14,7 @@
 #ifndef RISU_REGINFO_PPC64LE_H
 #define RISU_REGINFO_PPC64LE_H
 
-struct reginfo
-{
+struct reginfo {
     uint32_t faulting_insn;
     uint32_t prev_insn;
     uint64_t nip;

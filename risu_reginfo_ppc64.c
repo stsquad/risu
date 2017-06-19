@@ -28,7 +28,7 @@ void reginfo_init(struct reginfo *ri, ucontext_t *uc)
     int i;
     memset(ri, 0, sizeof(*ri));
 
-    ri->faulting_insn = *((uint32_t *)uc->uc_mcontext.regs->nip);
+    ri->faulting_insn = *((uint32_t *) uc->uc_mcontext.regs->nip);
     ri->nip = uc->uc_mcontext.regs->nip - image_start_address;
 
     for (i = 0; i < NGREG; i++) {
@@ -76,16 +76,16 @@ int reginfo_is_eq(struct reginfo *m, struct reginfo *a)
             continue;
         }
 
-        if  (m->fpregs[i] != a->fpregs[i]) {
+        if (m->fpregs[i] != a->fpregs[i]) {
             return 0;
         }
     }
 
     for (i = 0; i < 32; i++) {
         if (m->vrregs.vrregs[i][0] != a->vrregs.vrregs[i][0] ||
-                m->vrregs.vrregs[i][1] != a->vrregs.vrregs[i][1] ||
-                m->vrregs.vrregs[i][2] != a->vrregs.vrregs[i][2] ||
-                m->vrregs.vrregs[i][3] != a->vrregs.vrregs[i][3]) {
+            m->vrregs.vrregs[i][1] != a->vrregs.vrregs[i][1] ||
+            m->vrregs.vrregs[i][2] != a->vrregs.vrregs[i][2] ||
+            m->vrregs.vrregs[i][3] != a->vrregs.vrregs[i][3]) {
             return 0;
         }
     }
@@ -93,7 +93,7 @@ int reginfo_is_eq(struct reginfo *m, struct reginfo *a)
 }
 
 /* reginfo_dump: print state to a stream, returns nonzero on success */
-int reginfo_dump(struct reginfo *ri, FILE *f)
+int reginfo_dump(struct reginfo *ri, FILE * f)
 {
     int i;
 
@@ -153,14 +153,12 @@ int reginfo_dump_mismatch(struct reginfo *m, struct reginfo *a, FILE *f)
 
     if (m->gregs[XER] != a->gregs[XER]) {
         fprintf(f, "Mismatch: XER\n");
-        fprintf(f, "m: [%lx] != a: [%lx]\n",
-                m->gregs[XER], a->gregs[XER]);
+        fprintf(f, "m: [%lx] != a: [%lx]\n", m->gregs[XER], a->gregs[XER]);
     }
 
     if (m->gregs[CCR] != a->gregs[CCR]) {
         fprintf(f, "Mismatch: Cond. Register\n");
-        fprintf(f, "m: [%lx] != a: [%lx]\n",
-                m->gregs[CCR], a->gregs[CCR]);
+        fprintf(f, "m: [%lx] != a: [%lx]\n", m->gregs[CCR], a->gregs[CCR]);
     }
 
     for (i = 0; i < 32; i++) {
@@ -168,18 +166,17 @@ int reginfo_dump_mismatch(struct reginfo *m, struct reginfo *a, FILE *f)
             continue;
         }
 
-        if  (m->fpregs[i] != a->fpregs[i]) {
+        if (m->fpregs[i] != a->fpregs[i]) {
             fprintf(f, "Mismatch: Register r%d\n", i);
-            fprintf(f, "m: [%f] != a: [%f]\n",
-                    m->fpregs[i], a->fpregs[i]);
+            fprintf(f, "m: [%f] != a: [%f]\n", m->fpregs[i], a->fpregs[i]);
         }
     }
 
     for (i = 0; i < 32; i++) {
         if (m->vrregs.vrregs[i][0] != a->vrregs.vrregs[i][0] ||
-                m->vrregs.vrregs[i][1] != a->vrregs.vrregs[i][1] ||
-                m->vrregs.vrregs[i][2] != a->vrregs.vrregs[i][2] ||
-                m->vrregs.vrregs[i][3] != a->vrregs.vrregs[i][3]) {
+            m->vrregs.vrregs[i][1] != a->vrregs.vrregs[i][1] ||
+            m->vrregs.vrregs[i][2] != a->vrregs.vrregs[i][2] ||
+            m->vrregs.vrregs[i][3] != a->vrregs.vrregs[i][3]) {
 
             fprintf(f, "Mismatch: Register vr%d\n", i);
             fprintf(f, "m: [%x, %x, %x, %x] != a: [%x, %x, %x, %x]\n",

@@ -7,7 +7,7 @@
  *
  * Contributors:
  *     Peter Maydell (Linaro) - initial implementation
- *******************************************************************************/
+ ******************************************************************************/
 
 #include <stdio.h>
 #include <ucontext.h>
@@ -18,39 +18,37 @@
 
 int insnsize(ucontext_t *uc)
 {
-   /* Return instruction size in bytes of the
-    * instruction at PC
-    */
-   if (uc->uc_mcontext.arm_cpsr & 0x20) 
-   {
-      uint16_t faulting_insn = *((uint16_t*)uc->uc_mcontext.arm_pc);
-      switch (faulting_insn & 0xF800)
-      {
-         case 0xE800:
-         case 0xF000:
-         case 0xF800:
+    /* Return instruction size in bytes of the
+     * instruction at PC
+     */
+    if (uc->uc_mcontext.arm_cpsr & 0x20) {
+        uint16_t faulting_insn = *((uint16_t *) uc->uc_mcontext.arm_pc);
+        switch (faulting_insn & 0xF800) {
+        case 0xE800:
+        case 0xF000:
+        case 0xF800:
             /* 32 bit Thumb2 instruction */
             return 4;
-         default:
+        default:
             /* 16 bit Thumb instruction */
             return 2;
-      }
-   }
-   /* ARM instruction */
-   return 4;
+        }
+    }
+    /* ARM instruction */
+    return 4;
 }
 
 void advance_pc(void *vuc)
 {
-   ucontext_t *uc = vuc;
-   uc->uc_mcontext.arm_pc += insnsize(uc);
+    ucontext_t *uc = vuc;
+    uc->uc_mcontext.arm_pc += insnsize(uc);
 }
 
 
 void set_ucontext_paramreg(void *vuc, uint64_t value)
 {
-   ucontext_t *uc = vuc;
-   uc->uc_mcontext.arm_r0 = value;
+    ucontext_t *uc = vuc;
+    uc->uc_mcontext.arm_r0 = value;
 }
 
 uint64_t get_reginfo_paramreg(struct reginfo *ri)
@@ -60,13 +58,13 @@ uint64_t get_reginfo_paramreg(struct reginfo *ri)
 
 int get_risuop(struct reginfo *ri)
 {
-   /* Return the risuop we have been asked to do
-    * (or -1 if this was a SIGILL for a non-risuop insn)
-    */
-   uint32_t insn = ri->faulting_insn;
-   int isz = ri->faulting_insn_size;
-   uint32_t op = insn & 0xf;
-   uint32_t key = insn & ~0xf;
-   uint32_t risukey = (isz == 2) ? 0xdee0 : 0xe7fe5af0;
-   return (key != risukey) ? -1 : op;
+    /* Return the risuop we have been asked to do
+     * (or -1 if this was a SIGILL for a non-risuop insn)
+     */
+    uint32_t insn = ri->faulting_insn;
+    int isz = ri->faulting_insn_size;
+    uint32_t op = insn & 0xf;
+    uint32_t key = insn & ~0xf;
+    uint32_t risukey = (isz == 2) ? 0xdee0 : 0xe7fe5af0;
+    return (key != risukey) ? -1 : op;
 }
