@@ -36,7 +36,12 @@ static void reginfo_init_vfp(struct reginfo *ri, ucontext_t *uc)
     unsigned long *rs = uc->uc_regspace;
 
     for (;;) {
-        switch (*rs++) {
+        unsigned long magic = *rs++;
+        unsigned long size = *rs++;
+
+        size -= 8; /* Account for the magic/size fields */
+
+        switch (magic) {
         case 0:
         {
             /* We didn't find any VFP at all (probably a no-VFP
@@ -57,11 +62,11 @@ static void reginfo_init_vfp(struct reginfo *ri, ucontext_t *uc)
              */
             int i;
             /* Skip if it's smaller than we expected (should never happen!) */
-            if (*rs < ((32 * 2) + 1)) {
-                rs += (*rs / 4);
+            if (size < ((32 * 2) + 1) * 4) {
+                rs += size / 4;
                 break;
             }
-            rs++;
+
             for (i = 0; i < 32; i++) {
                 ri->fpregs[i] = *rs++;
                 ri->fpregs[i] |= (uint64_t) (*rs++) << 32;
@@ -86,7 +91,7 @@ static void reginfo_init_vfp(struct reginfo *ri, ucontext_t *uc)
         }
         default:
             /* Some other kind of block, ignore it */
-            rs += (*rs / 4);
+            rs += size / 4;
             break;
         }
     }
