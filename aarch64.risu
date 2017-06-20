@@ -2084,7 +2084,12 @@ DUPes A64_V 0 1 op 1111 0000 imm5:5 0 imm4:4 1 rn:5 rd:5
 
 # C3.6.8 AdvSIMD scalar pairwise
 # Includes all ops and reserved patterns
+# 31 30 29 28 27 26 25 24 23    22 21 20 19 18 17 16      12 11 10 9    5 4    0
+#  0  1 U   1  1  1  1  0 [ size ]  1  1  0  0  0 [ opcode ]  1  0 [ Rn ] [ Rd ]
 SCALARPAIR A64_V 0 1 U 11110 size:2 11000 opcode:5 10 rn:5 rd:5
+# ARMv8.2 half precision
+FADDP_FP16 A64_V 0 1 0 11110   00   11000   01101  10 rn:5 rd:5
+FMAXP_FP16 A64_V 0 1 0 11110   00   11000   01111  10 rn:5 rd:5
 
 # C3.6.9 scalar shift immediate
 #
@@ -2160,12 +2165,14 @@ SUBsv_RES A64_V   01 1 11110 size:2 1 rm:5 10000 1 rn:5 rd:5 \
 
 CMEQ     A64_V   01 1 11110 size:2 1 rm:5 10001 1 rn:5 rd:5
 SQRDMULH A64_V   01 1 11110 size:2 1 rm:5 10110 1 rn:5 rd:5
-FCMGE    A64_V   01 1 11110 0 size:1 1 rm:5 11100 1 rn:5 rd:5
-FACGE    A64_V   01 1 11110 0 size:1 1 rm:5 11101 1 rn:5 rd:5
+FCMGE    A64_V  01 1 11110 0 size:1 1 rm:5 11100 1 rn:5 rd:5
+FACGE      A64_V 01 1 11110 0 size:1 1 rm:5 11101 1 rn:5 rd:5
+FACGE_FP16 A64_V 01 1 11110 0  10      rm:5 00101 1 rn:5 rd:5
 FABD     A64_V   01 1 11110 1 size:1 1 rm:5 11010 1 rn:5 rd:5
 FCMGT    A64_V   01 1 11110 1 size:1 1 rm:5 11100 1 rn:5 rd:5
-FACGT    A64_V   01 1 11110 1 size:1 1 rm:5 11101 1 rn:5 rd:5 \
+FACGT     A64_V   01 1 11110 1 size:1 1 rm:5 11101 1 rn:5 rd:5 \
 !constraints { $size != 11; }
+FACGT_FP16 A64_V  01 1 11110 1  10      rm:5 00101 1 rn:5 rd:5
 
 # C3.6.12 AdvSIMD scalar 2reg misc
 CMGTzero A64_V      01 0 11110 size:2 10000 01000 10 rn:5 rd:5
@@ -2394,7 +2401,8 @@ SQDMULHv A64_V  0 Q:1 0 01110  size:2 1 rm:5 10110 1 rn:5 rd:5
 ADDPv    A64_V  0 Q:1 0 01110  size:2 1 rm:5 10111 1 rn:5 rd:5
 FMAXNMv  A64_V  0 Q:1 0 01110  size:2 1 rm:5 11000 1 rn:5 rd:5 # size:0x
 FMLAv    A64_V  0 Q:1 0 01110  size:2 1 rm:5 11001 1 rn:5 rd:5 # size:0x
-FADDv    A64_V  0 Q:1 0 01110  size:2 1 rm:5 11010 1 rn:5 rd:5 # size:0x
+FADDv      A64_V  0 Q:1 0 01110  size:2 1 rm:5 11010 1 rn:5 rd:5 # size:0x
+FADDv_FP16 A64_V  0 Q:1 0 01110  01     0 rm:5 00010 1 rn:5 rd:5
 FMULXv   A64_V  0 Q:1 0 01110  size:2 1 rm:5 11011 1 rn:5 rd:5 # size:0x
 FCMEQv   A64_V  0 Q:1 0 01110  size:2 1 rm:5 11100 1 rn:5 rd:5 # size:0x
 FMAXv    A64_V  0 Q:1 0 01110  size:2 1 rm:5 11110 1 rn:5 rd:5 # size:0x
@@ -2431,18 +2439,23 @@ UMAXP   A64_V  0 Q:1 1 01110  size:2 1 rm:5 10100 1 rn:5 rd:5
 UMINP   A64_V  0 Q:1 1 01110  size:2 1 rm:5 10101 1 rn:5 rd:5
 SQRDMULHv A64_V   0 Q:1 1 01110  size:2 1 rm:5 10110 1 rn:5 rd:5
 FMAXNMPv A64_V 0 Q:1 1 01110  size:2 1 rm:5 11000 1 rn:5 rd:5 # size: 0x
-FADDPv   A64_V  0 Q:1 1 01110  size:2 1 rm:5 11010 1 rn:5 rd:5 # size: 0x
+FADDPv      A64_V  0 Q:1 1 01110  size:2 1 rm:5  11010 1 rn:5 rd:5 # size: 0x
 FMULv    A64_V  0 Q:1 1 01110  size:2 1 rm:5 11011 1 rn:5 rd:5 # size: 0x
 FCMGEv   A64_V  0 Q:1 1 01110  size:2 1 rm:5 11100 1 rn:5 rd:5 # size: 0x
-FACGEv   A64_V  0 Q:1 1 01110  size:2 1 rm:5 11101 1 rn:5 rd:5 # size: 0x
+FACGEv      A64_V  0 Q:1 1 01110  size:2 1 rm:5 11 10 1 1 rn:5 rd:5 # size: 0x
+FACGEv_FP16 A64_V  0 Q:1 1 01110  0 10     rm:5 11 10 1 1 rn:5 rd:5 # size: 10
 FMAXPv   A64_V  0 Q:1 1 01110  size:2 1 rm:5 11110 1 rn:5 rd:5 # size: 0x
 FDIVv    A64_V  0 Q:1 1 01110  size:2 1 rm:5 11111 1 rn:5 rd:5 # size: 0x
 EORv     A64_V  0 Q:1 1 01110  size:2 1 rm:5 00011 1 rn:5 rd:5 # size: 00
 BSL     A64_V  0 Q:1 1 01110  size:2 1 rm:5 00011 1 rn:5 rd:5 # size: 01
 FMINNMPv A64_V  0 Q:1 1 01110  size:2 1 rm:5 11000 1 rn:5 rd:5 # size: 1x
-FABDv    A64_V  0 Q:1 1 01110  size:2 1 rm:5 11010 1 rn:5 rd:5 # size: 1x
+
+FABDv      A64_V  0 Q:1 1 01110 size:2 1 rm:5 11010 1 rn:5 rd:5 # size: 1x
+FABDv_FP16 A64_V  0  1  1 11110  1 10    rm:5 00010 1 rn:5 rd:5 # size: 10
+
 FCMGTv   A64_V  0 Q:1 1 01110  size:2 1 rm:5 11100 1 rn:5 rd:5 # size: 1x
-FACGTv   A64_V  0 Q:1 1 01110  size:2 1 rm:5 11101 1 rn:5 rd:5 # size: 1x
+FACGTv      A64_V  0 Q:1 1 01110  size:2 1 rm:5 11101 1 rn:5 rd:5 # size: 1x
+FACGTv_FP16 A64_V  0 Q:1 1 01110  11     0 rm:5 00101 1 rn:5 rd:5 # size: 11
 FMINPv   A64_V  0 Q:1 1 01110  size:2 1 rm:5 11110 1 rn:5 rd:5 # size: 1x
 BIT     A64_V  0 Q:1 1 01110  size:2 1 rm:5 00011 1 rn:5 rd:5 # size: 10
 BIF     A64_V  0 Q:1 1 01110  size:2 1 rm:5 00011 1 rn:5 rd:5 # size: 11
@@ -2488,8 +2501,12 @@ FCMEQz  A64_V   0 Q:1 0 01110 size:2 10000 01101 10 rn:5 rd:5 \
 !constraints { $size > 1; }
 FCMLTz  A64_V   0 Q:1 0 01110 size:2 10000 01110 10 rn:5 rd:5 \
 !constraints { $size > 1; }
-FABSv   A64_V   0 Q:1 0 01110 size:2 10000 01111 10 rn:5 rd:5 \
+
+# C7.2.36 FABS (vector)
+FABSv   A64_V    0 Q:1 0 01110 size:2 10000 01111 10 rn:5 rd:5 \
 !constraints { $size > 1; }
+FABSv_FP16 A64_V 0 Q:1 0 01110  11    11100 01111 10 rn:5 rd:5
+
 FRINTPv A64_V   0 Q:1 0 01110 size:2 10000 11000 10 rn:5 rd:5 \
 !constraints { $size > 1; }
 FRINTZv A64_V   0 Q:1 0 01110 size:2 10000 11001 10 rn:5 rd:5 \
@@ -2647,14 +2664,17 @@ FCSEL_RES2 A64_V 000 11110 1 type:1 1 rm:5 cond:4 11 rn:5 rd:5
 # FMOV (register) opc = 0
 FMOV A64_V 00011110 type:2 1 0000 00 10000 rn:5 rd:5 \
 !constraints { $type < 2; }
-# UnallocatedEncoding: type >= 2
-FMOV_RES A64_V 00011110 1 type:1 1 0000 00 10000 rn:5 rd:5
+# FP16 variant
+FMOV_FP16 A64_V 00011110 11 1 0000 00 10000 rn:5 rd:5
+# UnallocatedEncoding: type = 2 (or 3 if FP16 not enabled)
+FMOV_RES A64_V 00011110 1 10 0000 00 10000 rn:5 rd:5
 
-# FABS (scalar) opc = 1
-FABS A64_V 00011110 type:2 1 0000 01 10000 rn:5 rd:5 \
+# C7.2.37 FABS (scalar) opc = 1
+FABS A64_V      00011110 type:2 1 0000 01 10000 rn:5 rd:5 \
 !constraints { $type < 2; }
-# UnallocatedEncoding: type >= 2
-FABS_RES A64_V 00011110 1 type:1 1 0000 01 10000 rn:5 rd:5
+FABS_FP16 A64_V 00011110   11   1 0000 01 10000 rn:5 rd:5
+# UnallocatedEncoding: type 10
+FABS_RES A64_V  00011110   10   1 0000 01 10000 rn:5 rd:5
 
 # FNEG (scalar) opc = 2
 FNEG A64_V 00011110 type:2 1 0000 10 10000 rn:5 rd:5 \
@@ -2704,10 +2724,11 @@ FDIV A64_V 00011110 type:2 1 rm:5 0001 10 rn:5 rd:5 \
 FDIV_RES A64_V 00011110 1 type:1 1 rm:5 0001 10 rn:5 rd:5
 
 # FADD (scalar)
-FADD A64_V 00011110 type:2 1 rm:5 0010 10 rn:5 rd:5 \
+FADD      A64_V 00011110 type:2 1 rm:5 0010 10 rn:5 rd:5 \
 !constraints { $type < 2; }
-# UnallocatedEncoding: type >= 2
-FADD_RES A64_V 00011110 1 type:1 1 rm:5 0010 10 rn:5 rd:5
+FADD_FP16 A64_V 00011110 11     1 rm:5 0010 10 rn:5 rd:5
+# UnallocatedEncoding: type = 2
+FADD_RES A64_V 00011110 1 10 rm:5 0010 10 rn:5 rd:5
 
 # FSUB (scalar)
 FSUB A64_V 00011110 type:2 1 rm:5 0011 10 rn:5 rd:5 \
