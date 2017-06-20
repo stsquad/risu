@@ -48,6 +48,11 @@ extern int test_fp_exc;
 /* The memory block should be this long */
 #define MEMBLOCKLEN 8192
 
+/* This is the data structure we pass over the socket for OP_COMPARE
+ * and OP_TESTEND. It is a simplified and reduced subset of what can
+ * be obtained with a ucontext_t*, and is architecture specific
+ * (defined in risu_reginfo_*.h).
+ */
 struct reginfo;
 
 /* Functions operating on reginfo */
