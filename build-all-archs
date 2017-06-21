@@ -11,9 +11,6 @@
 # Contributors:
 #     Peter Maydell (Linaro) - initial implementation
 
-# So we notice risugen failing even though it's in a pipeline
-set -o pipefail
-
 # Simple usage
 usage() {
     cat <<-EOF
@@ -21,7 +18,10 @@ usage() {
 
         Options include:
             --static               build a static binary
+            --use-docker[=tags]    use docker cross compile
 
+        If specifying docker the default will be to use the any
+        qemu:debian-FOO-cross targets available on your system.
 EOF
     exit 1
 }
@@ -37,6 +37,14 @@ while [[ "$1" = -* ]]; do
         --static)
             CONF="--static"
             ;;
+        --use-docker)
+            if [ -z "$arg" ]; then
+                default_tags=$(docker images qemu --format "{{.Repository}}:{{.Tag}}" | grep "\(arm\|power\).*cross$")
+                docker_tags=$(echo $default_tags | sed 's/\n/\s/g' )
+            else
+                docker_tags="$arg"
+            fi
+            ;;
         --help)
             usage
             ;;
@@ -48,10 +56,24 @@ done
 
 # Debian stretch and Ubuntu Xenial have cross compiler packages for
 # all of these:
-# gcc-arm-linux-gnueabihf gcc-aarch64-linux-gnu gcc-m68k-linux-gnu
-# gcc-powerpc64le-linux-gnu gcc-powerpc64-linux-gnu
+#   gcc-arm-linux-gnueabihf gcc-aarch64-linux-gnu gcc-m68k-linux-gnu
+#   gcc-powerpc64le-linux-gnu gcc-powerpc64-linux-gnu
+# If docker is enabled we just brute force the various images until we
+# can set the one that has a workable cross compiler.
+
+DOCKER_RUN="docker run --rm -t -u $(id -u) -v $(pwd):$(pwd) -w $(pwd)"
 
 program_exists() {
+    if [ ! -z "$docker_tags" ]; then
+        use_docker_tag=""
+        for tag in $docker_tags; do
+            if ${DOCKER_RUN} ${tag} /bin/bash -c "command -v $1 >/dev/null"; then
+                use_docker_tag=$tag
+                return
+            fi
+        done
+    fi
+
     command -v "$1" >/dev/null 2>&1
 }
 
@@ -62,19 +84,29 @@ for triplet in aarch64-linux-gnu arm-linux-gnueabihf m68k-linux-gnu \
     if ! program_exists "${triplet}-gcc"; then
         echo "Skipping ${triplet}: no compiler found"
         continue
+    else
+        echo "Building ${triplet} on ${use_docker_tag:-host}..."
     fi
 
     # Do a complete rebuild from scratch, because it's cheap enough.
     rm -rf build/${triplet}
     mkdir -p build/${triplet}
 
-    (cd build/${triplet} && CROSS_PREFIX="${triplet}-"  ../../configure ${CONF})
-    make -C build/${triplet} EXTRA_CFLAGS=-Werror
+    CONFIGURE="cd build/${triplet} && CROSS_PREFIX="${triplet}-"  ../../configure ${CONF}"
+    MAKE="make -C build/${triplet} EXTRA_CFLAGS=-Werror"
 
+    if [ -z "$use_docker_tag" ]; then
+        /bin/bash -c "${CONFIGURE}"
+        ${MAKE}
+    else
+        ${DOCKER_RUN} $use_docker_tag /bin/bash -c "${CONFIGURE}"
+        ${DOCKER_RUN} $use_docker_tag /bin/bash -c "${MAKE}"
+    fi
 done
 
 # Now run risugen for all architectures
 mkdir -p build/risuout
+set -o pipefail # detect failures in pipeline
 
 for f in *.risu; do
     echo "Running risugen on $f..."
