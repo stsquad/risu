@@ -313,7 +313,11 @@ int main(int argc, char **argv)
 
     if (ismaster) {
         if (trace) {
-            master_fd = open(trace_fn, O_WRONLY | O_CREAT, S_IRWXU);
+            if (strcmp(trace_fn, "-") == 0) {
+                master_fd = STDOUT_FILENO;
+            } else {
+                master_fd = open(trace_fn, O_WRONLY | O_CREAT, S_IRWXU);
+            }
         } else {
             fprintf(stderr, "master port %d\n", port);
             master_fd = master_connect(port);
@@ -321,7 +325,11 @@ int main(int argc, char **argv)
         return master();
     } else {
         if (trace) {
-            apprentice_fd = open(trace_fn, O_RDONLY);
+            if (strcmp(trace_fn, "-") == 0) {
+                apprentice_fd = STDIN_FILENO;
+            } else {
+                apprentice_fd = open(trace_fn, O_RDONLY);
+            }
         } else {
             fprintf(stderr, "apprentice host %s port %d\n", hostname, port);
             apprentice_fd = apprentice_connect(hostname, port);
