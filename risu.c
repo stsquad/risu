@@ -26,6 +26,8 @@
 #include <fcntl.h>
 #include <string.h>
 
+#include "config.h"
+
 #include "risu.h"
 
 void *memblock;
@@ -33,6 +35,11 @@ void *memblock;
 int apprentice_fd, master_fd;
 int trace;
 size_t signal_count;
+
+#ifdef HAVE_ZLIB
+#include <zlib.h>
+gzFile gz_trace_file;
+#endif
 
 sigjmp_buf jmpbuf;
 
@@ -48,7 +55,17 @@ int read_sock(void *ptr, size_t bytes)
 
 int write_trace(void *ptr, size_t bytes)
 {
-    size_t res = write(master_fd, ptr, bytes);
+    size_t res;
+
+#ifdef HAVE_ZLIB
+    if (master_fd == STDOUT_FILENO) {
+#endif
+        res = write(master_fd, ptr, bytes);
+#ifdef HAVE_ZLIB
+    } else {
+        res = gzwrite(gz_trace_file, ptr, bytes);
+    }
+#endif
     return (res == bytes) ? 0 : 1;
 }
 
@@ -66,7 +83,18 @@ int write_sock(void *ptr, size_t bytes)
 
 int read_trace(void *ptr, size_t bytes)
 {
-    size_t res = read(apprentice_fd, ptr, bytes);
+    size_t res;
+
+#ifdef HAVE_ZLIB
+    if (apprentice_fd == STDIN_FILENO) {
+#endif
+        res = read(apprentice_fd, ptr, bytes);
+#ifdef HAVE_ZLIB
+    } else {
+        res = gzread(gz_trace_file, ptr, bytes);
+    }
+#endif
+
     return (res == bytes) ? 0 : 1;
 }
 
@@ -189,6 +217,11 @@ void load_image(const char *imgfile)
 int master(void)
 {
     if (sigsetjmp(jmpbuf, 1)) {
+#ifdef HAVE_ZLIB
+        if (trace && master_fd != STDOUT_FILENO) {
+            gzclose(gz_trace_file);
+        }
+#endif
         close(master_fd);
         if (trace) {
             fprintf(stderr, "trace complete after %zd checkpoints\n",
@@ -210,6 +243,11 @@ int master(void)
 int apprentice(void)
 {
     if (sigsetjmp(jmpbuf, 1)) {
+#ifdef HAVE_ZLIB
+        if (trace && apprentice_fd != STDIN_FILENO) {
+            gzclose(gz_trace_file);
+        }
+#endif
         close(apprentice_fd);
         fprintf(stderr, "finished early after %zd checkpoints\n", signal_count);
         return report_match_status();
@@ -317,6 +355,9 @@ int main(int argc, char **argv)
                 master_fd = STDOUT_FILENO;
             } else {
                 master_fd = open(trace_fn, O_WRONLY | O_CREAT, S_IRWXU);
+#ifdef HAVE_ZLIB
+                gz_trace_file = gzdopen(master_fd, "wb9");
+#endif
             }
         } else {
             fprintf(stderr, "master port %d\n", port);
@@ -329,6 +370,9 @@ int main(int argc, char **argv)
                 apprentice_fd = STDIN_FILENO;
             } else {
                 apprentice_fd = open(trace_fn, O_RDONLY);
+#ifdef HAVE_ZLIB
+                gz_trace_file = gzdopen(apprentice_fd, "rb");
+#endif
             }
         } else {
             fprintf(stderr, "apprentice host %s port %d\n", hostname, port);

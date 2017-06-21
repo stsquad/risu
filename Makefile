@@ -17,7 +17,7 @@ VPATH=$(SRCDIR)
 
 CFLAGS ?= -g
 
-ALL_CFLAGS = -Wall -D_GNU_SOURCE -DARCH=$(ARCH) $(CFLAGS) $(EXTRA_CFLAGS)
+ALL_CFLAGS = -Wall -D_GNU_SOURCE -DARCH=$(ARCH) $(BUILD_INC) $(CFLAGS) $(EXTRA_CFLAGS)
 
 PROG=risu
 SRCS=risu.c comms.c reginfo.c risu_$(ARCH).c risu_reginfo_$(ARCH).c
@@ -35,7 +35,7 @@ all: $(PROG) $(BINS)
 dump: $(RISU_ASMS)
 
 $(PROG): $(OBJS)
-	$(CC) $(STATIC) $(ALL_CFLAGS) -o $@ $^
+	$(CC) $(STATIC) $(ALL_CFLAGS) -o $@ $^ $(LDFLAGS)
 
 %.risu.asm: %.risu.bin
 	${OBJDUMP} -b binary -m $(ARCH) -D $^ > $@
