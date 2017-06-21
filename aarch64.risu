@@ -2086,10 +2086,13 @@ DUPes A64_V 0 1 op 1111 0000 imm5:5 0 imm4:4 1 rn:5 rd:5
 # Includes all ops and reserved patterns
 # 31 30 29 28 27 26 25 24 23    22 21 20 19 18 17 16      12 11 10 9    5 4    0
 #  0  1 U   1  1  1  1  0 [ size ]  1  1  0  0  0 [ opcode ]  1  0 [ Rn ] [ Rd ]
-SCALARPAIR A64_V 0 1 U 11110 size:2 11000 opcode:5 10 rn:5 rd:5
+SCALARPAIR   A64_V 0 1 U 11110 size:2 11000 opcode:5 10 rn:5 rd:5
 # ARMv8.2 half precision
-FADDP_FP16 A64_V 0 1 0 11110   00   11000   01101  10 rn:5 rd:5
-FMAXP_FP16 A64_V 0 1 0 11110   00   11000   01111  10 rn:5 rd:5
+FMAXNMP_FP16 A64_V 0 1 0 11110   00   11000   01100  10 rn:5 rd:5
+FADDP_FP16   A64_V 0 1 0 11110   00   11000   01101  10 rn:5 rd:5
+FMAXP_FP16   A64_V 0 1 0 11110   00   11000   01111  10 rn:5 rd:5
+FMINNMP_FP16 A64_V 0 1 0 11110   10   11000   01100  10 rn:5 rd:5
+FMINP_FP16   A64_V 0 1 0 11110   10   11000   01111  10 rn:5 rd:5
 
 # C3.6.9 scalar shift immediate
 #
