@@ -68,3 +68,8 @@ int get_risuop(struct reginfo *ri)
     uint32_t risukey = (isz == 2) ? 0xdee0 : 0xe7fe5af0;
     return (key != risukey) ? -1 : op;
 }
+
+uintptr_t get_pc(struct reginfo *ri)
+{
+   return ri->gpreg[15];
+}

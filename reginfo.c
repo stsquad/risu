@@ -24,9 +24,18 @@ static int packet_mismatch;
 int send_register_info(write_fn write_fn, void *uc)
 {
     struct reginfo ri;
+    trace_header_t header;
     int op;
+
     reginfo_init(&ri, uc);
     op = get_risuop(&ri);
+
+    /* Write a header with PC/op to keep in sync */
+    header.pc = get_pc(&ri);
+    header.risu_op = op;
+    if (write_fn(&header, sizeof(header)) != 0) {
+        return -1;
+    }
 
     switch (op) {
     case OP_TESTEND:
@@ -63,9 +72,24 @@ int recv_and_compare_register_info(read_fn read_fn,
                                    respond_fn resp_fn, void *uc)
 {
     int resp = 0, op;
+    trace_header_t header;
 
     reginfo_init(&master_ri, uc);
     op = get_risuop(&master_ri);
+
+    if (read_fn(&header, sizeof(header)) != 0) {
+        return -1;
+    }
+
+    if (header.risu_op != op) {
+        /* We are out of sync */
+        resp = 2;
+        resp_fn(resp);
+        return resp;
+    }
+
+    /* send OK for the header */
+    resp_fn(0);
 
     switch (op) {
     case OP_COMPARE:
