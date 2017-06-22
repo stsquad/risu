@@ -7,6 +7,7 @@
 #
 # Contributors:
 #     Claudio Fontana - initial implementation
+#     Alex Bennée - a number of additions including v8.2 FP16
 #     based on arm.risu by Peter Maydell
 ###############################################################################
 
@@ -18,6 +19,15 @@
 # XXX NIY: PC-related instructions
 # XXX NIY: SP-related instructions
 # XXX NIY: floating point and SIMD specific insns
+
+# Instruction suffixes to identify variants
+#   m - memory (loads/stores)
+#   s - scalar
+#   v - vector
+#   z - zero (e.g. compare to zero)
+#   f - fixed point
+#
+# _FP16 for ARMv8.2 half-precision extensions
 
 # - - - - 1 - 0 - - - - - - - - - - - - - - - Loads and stores
 # C3.3 Loads and stores
