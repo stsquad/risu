@@ -2221,8 +2221,9 @@ SQNEG_S2MISC A64_V 01 1 11110 size:2 10000 00111 10 rn:5 rd:5
 # XXX lots of others in this group
 
 # C3.6.12 AdvSIMD scalar two-reg misc
-# 31 30 29 28 27 26 25 24 23 22 21 20      16     12 11 10 9     5  4    0
-#  0  1 U   1  1  1  1  0  size  1 0 0 0 0 [ opcode ] 1 0 [  Rn  ] [  Rd  ]
+# 31 30 29 28 27 26 25 24 23    22 21         17 16      12     9    5 4    0
+#  0  1 U   1  1  1  1  0 [ size ] [ 1 0 0 0 0 ] [ opcode ] 1 0 [ Rn ] [ Rd ]
+#  FP16?                  [ 1  1 ] [ 1 1 1 0 0 ]
 # U size opcode
 SUQADDs  A64_V          01 0 11110   size:2 10000 00011 10 rn:5 rd:5 
 SQABSs  A64_V           01 0 11110   size:2 10000 00111 10 rn:5 rd:5 
@@ -2231,17 +2232,21 @@ CMEQzs  A64_V           01 0 11110   size:2 10000 01001 10 rn:5 rd:5
 CMLTzs  A64_V           01 0 11110   size:2 10000 01010 10 rn:5 rd:5 
 ABSs  A64_V             01 0 11110   size:2 10000 01011 10 rn:5 rd:5 
 SQXTN_SQXTN2s  A64_V    01 0 11110   size:2 10000 10100 10 rn:5 rd:5 
-FCVTNSvs  A64_V         01 0 11110 0 size:1 10000 11010 10 rn:5 rd:5 
-FCVTMSvs  A64_V         01 0 11110 0 size:1 10000 11011 10 rn:5 rd:5 
-FCVTASvs  A64_V         01 0 11110 0 size:1 10000 11100 10 rn:5 rd:5 
-SCVTFvis  A64_V         01 0 11110 0 size:1 10000 11101 10 rn:5 rd:5 
-FCMGTzs      A64_V      01 0 11110 1 size:1 10000 01100 10 rn:5 rd:5
-FCMGTzs_FP16 A64_V      01 0 11110 1      1 11100 01100 10 rn:5 rd:5
-FCMEQz      A64_V       01 0 11110 1 size:1 10000 01101 10 rn:5 rd:5
-FCMEQzs_FP16 A64_V      01 0 11110 1      1 11100 01101 10 rn:5 rd:5
-FCMLTzs      A64_V      01 0 11110 1 size:1 10000 01110 10 rn:5 rd:5
-FCMLTzs_FP16 A64_V      01 0 11110 1      1 11100 01110 10 rn:5 rd:5
-FCVTPSvs  A64_V         01 0 11110 1 size:1 10000 11010 10 rn:5 rd:5 
+FCVTNSvs      A64_V     01 0 11110 0 size:1 10000 11010 10 rn:5 rd:5
+FCVTNSvs_FP16 A64_V     01 0 11110 0      1 11100 11010 10 rn:5 rd:5
+FCVTMSvs      A64_V     01 0 11110 0 size:1 10000 11011 10 rn:5 rd:5
+FCVTMSvs_FP16 A64_V     01 0 11110 0      1 11100 11011 10 rn:5 rd:5
+FCVTASvs      A64_V     01 0 11110 0 size:1 10000 11100 10 rn:5 rd:5
+FCVTASvs_FP16 A64_V     01 0 11110 0      1 11100 11100 10 rn:5 rd:5
+SCVTFvis      A64_V     01 0 11110 0 size:1 10000 11101 10 rn:5 rd:5
+FCMGTzs       A64_V     01 0 11110 1 size:1 10000 01100 10 rn:5 rd:5
+FCMGTzs_FP16  A64_V     01 0 11110 1      1 11100 01100 10 rn:5 rd:5
+FCMEQz        A64_V     01 0 11110 1 size:1 10000 01101 10 rn:5 rd:5
+FCMEQzs_FP16  A64_V     01 0 11110 1      1 11100 01101 10 rn:5 rd:5
+FCMLTzs       A64_V     01 0 11110 1 size:1 10000 01110 10 rn:5 rd:5
+FCMLTzs_FP16  A64_V     01 0 11110 1      1 11100 01110 10 rn:5 rd:5
+FCVTPSvs      A64_V     01 0 11110 1 size:1 10000 11010 10 rn:5 rd:5
+FCVTPSvs_FP16 A64_V     01 0 11110 1      1 11100 11010 10 rn:5 rd:5
 FCVTZSvis  A64_V        01 0 11110 1 size:1 10000 11011 10 rn:5 rd:5 
 FRECPEs  A64_V          01 0 11110 1 size:1 10000 11101 10 rn:5 rd:5 
 FRECPX  A64_V           01 0 11110 1 size:1 10000 11111 10 rn:5 rd:5 
@@ -2253,15 +2258,19 @@ NEGvs  A64_V            01 1 11110   size:2 10000 01011 10 rn:5 rd:5
 SQXTUN_SQXTUN2s  A64_V  01 1 11110   size:2 10000 10010 10 rn:5 rd:5 
 UQXTN_UQXTN2s  A64_V    01 1 11110   size:2 10000 10100 10 rn:5 rd:5 
 FCVTXN_FCVTXN2s  A64_V  01 1 11110 0 size:1 10000 10110 10 rn:5 rd:5 
-FCVTNUvs  A64_V         01 1 11110 0 size:1 10000 11010 10 rn:5 rd:5 
-FCVTMUvs  A64_V         01 1 11110 0 size:1 10000 11011 10 rn:5 rd:5 
-FCVTAUvs  A64_V         01 1 11110 0 size:1 10000 11100 10 rn:5 rd:5 
+FCVTNUvs      A64_V     01 1 11110 0 size:1 10000 11010 10 rn:5 rd:5
+FCVTNUvs_FP16 A64_V     01 1 11110 0      1 11100 11010 10 rn:5 rd:5
+FCVTMUvs      A64_V     01 1 11110 0 size:1 10000 11011 10 rn:5 rd:5
+FCVTMUvs_FP16 A64_V     01 1 11110 0      1 11100 11011 10 rn:5 rd:5
+FCVTAUvs      A64_V     01 1 11110 0 size:1 10000 11100 10 rn:5 rd:5
+FCVTAUvs_FP16 A64_V     01 1 11110 0      1 11100 11100 10 rn:5 rd:5
 UCVTFvis  A64_V         01 1 11110 0 size:1 10000 11101 10 rn:5 rd:5 
 FCMGEzs      A64_V      01 1 11110 1 size:1 10000 01100 10 rn:5 rd:5
 FCMGEzs_FP16 A64_V      01 1 11110 1      1 11100 01100 10 rn:5 rd:5
 FCMLEzs      A64_V      01 1 11110 1 size:1 10000 01101 10 rn:5 rd:5
 FCMLEzs_FP16 A64_V      01 1 11110 1      1 11100 01101 10 rn:5 rd:5
-FCVTPUvs  A64_V         01 1 11110 1 size:1 10000 11010 10 rn:5 rd:5 
+FCVTPUvs      A64_V     01 1 11110 1 size:1 10000 11010 10 rn:5 rd:5
+FCVTPUvs_FP16 A64_V     01 1 11110 1      1 11100 11010 10 rn:5 rd:5
 FCVTZUvis  A64_V        01 1 11110 1 size:1 10000 11011 10 rn:5 rd:5 
 FRSQRTEs  A64_V         01 1 11110 1 size:1 10000 11101 10 rn:5 rd:5 
  
@@ -2502,12 +2511,19 @@ FRINTNv A64_V   0 Q:1 0 01110 size:2 10000 11000 10 rn:5 rd:5 \
 !constraints { $size < 2; }
 FRINTMv A64_V   0 Q:1 0 01110 size:2 10000 11001 10 rn:5 rd:5 \
 !constraints { $size < 2; }
-FCVTNSv A64_V   0 Q:1 0 01110 size:2 10000 11010 10 rn:5 rd:5 \
+
+FCVTNSv      A64_V 0 Q:1 0 01110 size:2 10000 11010 10 rn:5 rd:5 \
 !constraints { $size < 2; }
-FCVTMSv A64_V   0 Q:1 0 01110 size:2 10000 11011 10 rn:5 rd:5 \
+FCVTNSv_FP16 A64_V 0 Q:1 0 01110     01 11100 11010 10 rn:5 rd:5 \
+
+FCVTMSv      A64_V 0 Q:1 0 01110 size:2 10000 11011 10 rn:5 rd:5 \
 !constraints { $size < 2; }
-FCVTASv A64_V   0 Q:1 0 01110 size:2 10000 11100 10 rn:5 rd:5 \
+FCVTMSv_FP16 A64_V 0 Q:1 0 01110     01 11100 11011 10 rn:5 rd:5
+
+FCVTASv      A64_V 0 Q:1 0 01110 size:2 10000 11100 10 rn:5 rd:5 \
 !constraints { $size < 2; }
+FCVTASv_FP16 A64_V 0 Q:1 0 01110     01 11100 11100 10 rn:5 rd:5
+
 SCVTFv  A64_V   0 Q:1 0 01110 size:2 10000 11101 10 rn:5 rd:5 \
 !constraints { $size < 2; }
 SCVTFv_RES1 A64_V   0 0 0 01110 01 10000 11101 10 rn:5 rd:5
@@ -2533,8 +2549,11 @@ FRINTPv A64_V   0 Q:1 0 01110 size:2 10000 11000 10 rn:5 rd:5 \
 !constraints { $size > 1; }
 FRINTZv A64_V   0 Q:1 0 01110 size:2 10000 11001 10 rn:5 rd:5 \
 !constraints { $size > 1; }
-FCVTPSv A64_V   0 Q:1 0 01110 size:2 10000 11010 10 rn:5 rd:5 \
+
+FCVTPSv      A64_V 0 Q:1 0 01110 size:2 10000 11010 10 rn:5 rd:5 \
 !constraints { $size > 1; }
+FCVTPSv_FP16 A64_V 0   1 0 11110     11 11100 11010 10 rn:5 rd:5
+
 FCVTPSvi A64_V   0 Q:1 0 01110 size:2 10000 11011 10 rn:5 rd:5 \
 !constraints { $size > 1; }
 URECPE  A64_V   0 Q:1 0 01110 size:2 10000 11100 10 rn:5 rd:5 \
@@ -2559,12 +2578,19 @@ FRINTAv A64_V   0 Q:1 1 01110 size:2 10000 11000 10 rn:5 rd:5 \
 !constraints { $size < 2; }
 FRINTXv A64_V   0 Q:1 1 01110 size:2 10000 11001 10 rn:5 rd:5 \
 !constraints { $size < 2; }
-FCVTNUv A64_V   0 Q:1 1 01110 size:2 10000 11010 10 rn:5 rd:5 \
+
+FCVTNUv      A64_V 0 Q:1 1 01110 size:2 10000 11010 10 rn:5 rd:5 \
 !constraints { $size < 2; }
-FCVTMUv A64_V   0 Q:1 1 01110 size:2 10000 11011 10 rn:5 rd:5 \
+FCVTNUv_FP16 A64_V 0 Q:1 1 01110     01 11100 11010 10 rn:5 rd:5
+
+FCVTMUv      A64_V 0 Q:1 1 01110 size:2 10000 11011 10 rn:5 rd:5 \
 !constraints { $size < 2; }
-FCVTAUv A64_V   0 Q:1 1 01110 size:2 10000 11100 10 rn:5 rd:5 \
+FCVTMUv_FP16 A64_V 0 Q:1 1 01110     01 11100 11011 10 rn:5 rd:5
+
+FCVTAUv      A64_V 0 Q:1 1 01110 size:2 10000 11100 10 rn:5 rd:5 \
 !constraints { $size < 2; }
+FCVTAUv_FP16 A64_V 0 Q:1 1 01110     01 11100 11100 10 rn:5 rd:5
+
 UCVTFv  A64_V   0 Q:1 1 01110 size:2 10000 11101 10 rn:5 rd:5 \
 !constraints { $size < 2; }
 UCVTFv_RES1 A64_V 0 0 1 01110 01 10000 11101 10 rn:5 rd:5
@@ -2583,8 +2609,11 @@ FNEGv   A64_V   0 Q:1 1 01110 size:2 10000 01111 10 rn:5 rd:5 \
 !constraints { $size > 1; }
 FRINTIv A64_V   0 Q:1 1 01110 size:2 10000 11001 10 rn:5 rd:5 \
 !constraints { $size > 1; }
-FCVTPUv A64_V   0 Q:1 1 01110 size:2 10000 11010 10 rn:5 rd:5 \
+
+FCVTPUv      A64_V 0 Q:1 1 01110 size:2 10000 11010 10 rn:5 rd:5 \
 !constraints { $size > 1; }
+FCVTPUv_FP16 A64_V 0 Q:1 1 01110     11 11100 11010 10 rn:5 rd:5
+
 FCVTZUvi A64_V  0 Q:1 1 01110 size:2 10000 11011 10 rn:5 rd:5 \
 !constraints { $size > 1; }
 URSQRTE  A64_V  0 Q:1 1 01110 size:2 10000 11100 10 rn:5 rd:5 \
@@ -2640,15 +2669,18 @@ SHA256SU0 A64_V 0101 1110 sz:2 10100 00010 10 rn:5 rd:5
 # 31 30 29 28 27 26 25 24 23 22 21 20  16 15 14 13 12 11 10 9    5 4       0
 #  M  0  S  1  1  1  1  0  type  1   Rm    op    1  0  0  0   Rn    opcode2
 
-FCMPS A64_V 000 11110 00 1 rm:5 00 1000 rn:5 00 000
-FCMPZS A64_V 000 11110 00 1 rm:5 00 1000 rn:5 01 000
-FCMPES A64_V 000 11110 00 1 rm:5 00 1000 rn:5 10 000
+FCMPS   A64_V 000 11110 00 1 rm:5 00 1000 rn:5 00 000
+FCMPZS  A64_V 000 11110 00 1 rm:5 00 1000 rn:5 01 000
+FCMPES  A64_V 000 11110 00 1 rm:5 00 1000 rn:5 10 000
 FCMPEZS A64_V 000 11110 00 1 rm:5 00 1000 rn:5 11 000
 
-FCMPD A64_V 000 11110 01 1 rm:5 00 1000 rn:5 00 000
-FCMPZD A64_V 000 11110 01 1 rm:5 00 1000 rn:5 01 000
-FCMPED A64_V 000 11110 01 1 rm:5 00 1000 rn:5 10 000
+FCMPD   A64_V 000 11110 01 1 rm:5 00 1000 rn:5 00 000
+FCMPZD  A64_V 000 11110 01 1 rm:5 00 1000 rn:5 01 000
+FCMPED  A64_V 000 11110 01 1 rm:5 00 1000 rn:5 10 000
 FCMPEZD A64_V 000 11110 01 1 rm:5 00 1000 rn:5 11 000
+
+FCMPH   A64_V 000 11110 11 1 rm:5 00 1000 rn:5 00 000
+FCMPEH  A64_V 000 11110 11 1 rm:5 00 1000 rn:5 10 000
 
 # Unallocated Encodings and ReservedValues
 FCMP_RES1 A64_V mos:3 11110 0 type:1 1 rm:5 00 1000 rn:5 opc:2 000 \
@@ -2867,8 +2899,10 @@ FCVTZUsf_RES1 A64_V sf:1 0011110 1 type:1 0 11 001 scale:6 rn:5 rd:5
 FCVTZUsf_RES2 A64_V 0 0011110 1 type:1 0 11 001 0 scale:5 rn:5 rd:5
 
 # C3.6.30 Floating-point<->integer conversions
-# 31 30 29 28 27 26 25 24 23 22 21 20 19 18    16 15 14 13 12 11 10  9  5  4  0
-# sf  0  S  1  1  1  1  0  type  1 rmode  opcode   0  0  0  0  0  0   Rn    Rd
+# 31 30 29 28     24 23    22 21 20    19 18      16 15      10 9    5 4    0
+# sf  0  S [ 11110 ] [ type ]  1 [ mode ] [ opcode ] [ 000000 ] [ Rn ] [ Rd ]
+#
+# Most FP16 are simply type=11
 
 # FCVTNS (scalar)
 FCVTNS A64_V sf:1 0011110 type:2 1 00 000 000000 rn:5 rd:5 \
@@ -2877,8 +2911,10 @@ FCVTNS A64_V sf:1 0011110 type:2 1 00 000 000000 rn:5 rd:5 \
 FCVTNS_RES A64_V sf:1 0011110 1 type:1 1 00 000 000000 rn:5 rd:5
 
 # FCVTNU (scalar)
-FCVTNU A64_V sf:1 0011110 type:2 1 00 001 000000 rn:5 rd:5 \
+FCVTNU      A64_V sf:1 0011110 type:2 1 00 001 000000 rn:5 rd:5 \
 !constraints { $type < 2; }
+FCVTNU_FP16 A64_V sf:1 0011110     11 1 00 001 000000 rn:5 rd:5
+
 # UnallocatedEncoding: type >= 2
 FCVTNU_RES A64_V sf:1 0011110 1 type:1 1 00 001 000000 rn:5 rd:5
 
@@ -2895,9 +2931,11 @@ UCVTFsi A64_V sf:1 0011110 type:2 1 00 011 000000 rn:5 rd:5 \
 UCVTFsi_RES A64_V sf:1 0011110 1 type:1 1 00 011 000000 rn:5 rd:5
 
 # FCVTAS (scalar)
-FCVTAS A64_V sf:1 0011110 type:2 1 00 100 000000 rn:5 rd:5 \
+FCVTAS      A64_V sf:1 0011110 type:2 1 00 100 000000 rn:5 rd:5 \
 !constraints { $type < 2; }
-# UnallocatedEncoding: type >= 2
+FCVTAS_FP16 A64_V sf:1 0011110     11 1 00 100 000000 rn:5 rd:5
+
+# UnallocatedEncoding: type >= 2 (if no v8.2 half precision)
 FCVTAS_RES A64_V sf:1 0011110 1 type:1 1 00 100 000000 rn:5 rd:5
 
 # FCVTAU (scalar)
@@ -2921,10 +2959,9 @@ FCVTPS A64_V sf:1 0011110 type:2 1 01 000 000000 rn:5 rd:5 \
 FCVTPS_RES A64_V sf:1 0011110 1 type:1 1 01 000 000000 rn:5 rd:5
 
 # FCVTPU (scalar)
-FCVTPU A64_V sf:1 0011110 type:2 1 01 001 000000 rn:5 rd:5 \
-!constraints { $type < 2; }
-# UnallocatedEncoding: type >= 2
-FCVTPU_RES A64_V sf:1 0011110 1 type:1 1 01 001 000000 rn:5 rd:5
+FCVTPU      A64_V sf:1 0011110 0 type:1 1 01 001 000000 rn:5 rd:5
+FCVTPU_FP16 A64_V sf:1 0011110 1      1 1 01 001 000000 rn:5 rd:5
+FCVTPU_RES  A64_V sf:1 0011110 1      0 1 01 001 000000 rn:5 rd:5
 
 # FCVTMS (scalar)
 FCVTMS A64_V sf:1 0011110 type:2 1 10 000 000000 rn:5 rd:5 \
