@@ -1994,11 +1994,17 @@ UMINV A64_V 0 Q:1 1 01110 size:2 11000 11010 10 rn:5 rd:5 \
 # ReservedValue: break the constraint (size==2) => (Q=1)
 UMINV_RES A64_V 0 0 1 01110 10 11000 11010 10 rn:5 rd:5
 
-FMAXNMV A64_V 0 1 1 01110 00 11000 01100 10 rn:5 rd:5
-FMAXV A64_V 0 1 1 01110 00 11000 01111 10 rn:5 rd:5
+FMAXNMV      A64_V 0  1  1 01110 00 11000 01100 10 rn:5 rd:5
+FMAXV        A64_V 0  1  1 01110 00 11000 01111 10 rn:5 rd:5
 
-FMINNMV A64_V 0 1 1 01110 10 11000 01100 10 rn:5 rd:5
-FMINV A64_V 0 1 1 01110 10 11000 01111 10 rn:5 rd:5
+FMAXNMV_FP16 A64_V 0 q:1 0 01110 00 11000 01100 10 rn:5 rd:5
+FMAXV_FP16   A64_V 0 q:1 0 01110 00 11000 01111 10 rn:5 rd:5
+
+FMINNMV      A64_V 0  1  1 01110 10 11000 01100 10 rn:5 rd:5
+FMINV        A64_V 0  1  1 01110 10 11000 01111 10 rn:5 rd:5
+
+FMINNMV_FP16 A64_V 0 q:1 0 01110 10 11000 01100 10 rn:5  rd:5
+FMINV_FP16   A64_V 0 q:1 0 01110 10 11000 01111 10 rn:5  rd:5
 
 # C3.6.5 AdvSIMD copy
 # 31 30 29 28 27 26 25 24 23 22 21 20    16 15 14    11 10 9  5 4  0
@@ -2088,8 +2094,8 @@ DUPes A64_V 0 1 op 1111 0000 imm5:5 0 imm4:4 1 rn:5 rd:5
 #  0  1 U   1  1  1  1  0 [ size ]  1  1  0  0  0 [ opcode ]  1  0 [ Rn ] [ Rd ]
 SCALARPAIR   A64_V 0 1 U 11110 size:2 11000 opcode:5 10 rn:5 rd:5
 # ARMv8.2 half precision
-FMAXNMP_FP16 A64_V 0 1 0 11110   00   11000   01100  10 rn:5 rd:5
 FADDP_FP16   A64_V 0 1 0 11110   00   11000   01101  10 rn:5 rd:5
+FMAXNMP_FP16 A64_V 0 1 0 11110   00   11000   01100  10 rn:5 rd:5
 FMAXP_FP16   A64_V 0 1 0 11110   00   11000   01111  10 rn:5 rd:5
 FMINNMP_FP16 A64_V 0 1 0 11110   10   11000   01100  10 rn:5 rd:5
 FMINP_FP16   A64_V 0 1 0 11110   10   11000   01111  10 rn:5 rd:5
@@ -2169,17 +2175,20 @@ SUBsv_RES A64_V   01 1 11110 size:2 1 rm:5 10000 1 rn:5 rd:5 \
 
 CMEQ     A64_V   01 1 11110 size:2 1 rm:5 10001 1 rn:5 rd:5
 SQRDMULH A64_V   01 1 11110 size:2 1 rm:5 10110 1 rn:5 rd:5
-FCMGE      A64_V 01 1 11110 0 size:1 1 rm:5 11100 1 rn:5 rd:5
-FCMGE_FP16 A64_V 01 1 11110 0      1 0 rm:5 00100 1 rn:5 rd:5
-FACGE      A64_V 01 1 11110 0 size:1 1 rm:5 11101 1 rn:5 rd:5
-FACGE_FP16 A64_V 01 1 11110 0  10      rm:5 00101 1 rn:5 rd:5
-FABD      A64_V   01 1 11110 1 size:1 1 rm:5 11010 1 rn:5 rd:5
-FABD_FP16 A64_V   01 1 11110 1    10    rm:5 00010 1 rn:5 rd:5
-FCMGT      A64_V  01 1 11110 1 size:1 1 rm:5 11100 1 rn:5 rd:5
-FCMGT_FP16 A64_V  01 1 11110 1      1 0 rm:5 00100 1 rn:5 rd:5
-FACGT     A64_V   01 1 11110 1 size:1 1 rm:5 11101 1 rn:5 rd:5 \
+
+FACGE       A64_V 01 1 11110 0 size:1 1 rm:5 11101 1 rn:5 rd:5
+FACGT       A64_V 01 1 11110 1 size:1 1 rm:5 11101 1 rn:5 rd:5 \
 !constraints { $size != 11; }
-FACGT_FP16 A64_V  01 1 11110 1  10      rm:5 00101 1 rn:5 rd:5
+FABD        A64_V 01 1 11110 1 size:1 1 rm:5 11010 1 rn:5 rd:5
+FCMGE       A64_V 01 1 11110 0 size:1 1 rm:5 11100 1 rn:5 rd:5
+FCMGT       A64_V 01 1 11110 1 size:1 1 rm:5 11100 1 rn:5 rd:5
+
+# ARMv8.2 half-precision variants
+FACGEs_FP16 A64_V 01 1 11110 0      1 0 rm:5 00101 1 rn:5 rd:5
+FACGTs_FP16 A64_V 01 1 11110 1      1 0 rm:5 00101 1 rn:5 rd:5
+FABDs_FP16  A64_V 01 1 11110 1      1 0 rm:5 00010 1 rn:5 rd:5
+FCMGEs_FP16 A64_V 01 1 11110 0      1 0 rm:5 00100 1 rn:5 rd:5
+FCMGTs_FP16 A64_V 01 1 11110 1      1 0 rm:5 00100 1 rn:5 rd:5
 
 # C3.6.12 AdvSIMD scalar 2reg misc
 CMGTzero A64_V      01 0 11110 size:2 10000 01000 10 rn:5 rd:5
@@ -2190,14 +2199,27 @@ CMLTzero A64_V      01 0 11110 size:2 10000 01010 10 rn:5 rd:5
 ABS A64_V           01 0 11110 size:2 10000 01011 10 rn:5 rd:5
 NEG A64_V           01 1 11110 size:2 10000 01011 10 rn:5 rd:5
 
-FCMGT_S2MISC A64_V  01 0 11110 size:2 10000 01100 10 rn:5 rd:5
-FCMEQ_S2MISC A64_V  01 0 11110 size:2 10000 01101 10 rn:5 rd:5
-FCMLT_S2MISC A64_V  01 0 11110 size:2 10000 01110 10 rn:5 rd:5
-FCMGE_S2MISC A64_V  01 1 11110 size:2 10000 01100 10 rn:5 rd:5
-FCMLE_S2MISC A64_V  01 1 11110 size:2 10000 01101 10 rn:5 rd:5
+# floating point compare with zero
+FCMEQz       A64_V 01 0 11110 size:2 10000 01101 10 rn:5 rd:5
+FCMGEz       A64_V 01 1 11110 size:2 10000 01100 10 rn:5 rd:5
+FCMGTz       A64_V 01 0 11110 size:2 10000 01100 10 rn:5 rd:5
+FCMLEz       A64_V 01 1 11110 size:2 10000 01101 10 rn:5 rd:5
+FCMLTz       A64_V 01 0 11110 size:2 10000 01110 10 rn:5 rd:5
 
-SCVTF_S2MISC A64_V 01 0 11110 0 sz 10000 11101 10 rn:5 rd:5
-UCVTF_S2MISC A64_V 01 1 11110 0 sz 10000 11101 10 rn:5 rd:5
+# ARMv8.2 half-precision variants
+FCMEQsz_FP16 A64_V 01 0 11110     11 11100 01101 10 rn:5 rd:5
+FCMGEsz_FP16 A64_V 01 1 11110     11 11100 01100 10 rn:5 rd:5
+FCMGTsz_FP16 A64_V 01 0 11110     11 11100 01100 10 rn:5 rd:5
+FCMLEsz_FP16 A64_V 01 1 11110     11 11100 01101 10 rn:5 rd:5
+FCMLTsz_FP16 A64_V 01 0 11110     11 11100 01110 10 rn:5 rd:5
+
+# integer to floating point conversion
+SCVTFs       A64_V 01 0 11110 0 sz 10000 11101 10 rn:5 rd:5
+UCVTFs       A64_V 01 1 11110 0 sz 10000 11101 10 rn:5 rd:5
+
+# ARMv8.2 half-precision variants
+SCVTFs_FP16  A64_V 01 0 11110 0  1 11100 11101 10 rn:5 rd:5
+UCVTFs_FP16  A64_V 01 1 11110 0  1 11100 11101 10 rn:5 rd:5
 
 FCVTNS_S2MISC A64_V 01 0 11110 0 sz 10000 11010 10 rn:5 rd:5
 FCVTMS_S2MISC A64_V 01 0 11110 0 sz 10000 11011 10 rn:5 rd:5
@@ -2479,7 +2501,7 @@ FABDv_FP16  A64_V 0 Q:1 1 01110       11 0 rm:5 00010 1 rn:5 rd:5 # size: 10
 FCMGTv      A64_V 0 Q:1 1 01110   size:2 1 rm:5 11100 1 rn:5 rd:5 # size: 1x
 FCMGTv_FP16 A64_V 0 Q:1 1 01110       11 0 rm:5 00100 1 rn:5 rd:5 # size: 11
 FACGTv      A64_V 0 Q:1 1 01110   size:2 1 rm:5 11101 1 rn:5 rd:5 # size: 1x
-FACGTv_FP16 A64_V 0 Q:1 1 01110       11 0 rm:5 00101 1 rn:5 rd:5 # size: 11
+FACGTv_FP16 A64_V 0 Q:1 1 01110       11 0 rm:5 00101 1 rn:5 rd:5
 
 FMINPv   A64_V  0 Q:1 1 01110  size:2 1 rm:5 11110 1 rn:5 rd:5 # size: 1x
 BIT     A64_V  0 Q:1 1 01110  size:2 1 rm:5 00011 1 rn:5 rd:5 # size: 10
