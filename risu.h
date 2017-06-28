@@ -91,7 +91,7 @@ int recv_and_compare_register_info(read_fn read_fn,
  * Should return 0 if it was a good match (ie end of test)
  * and 1 for a mismatch.
  */
-int report_match_status(void);
+int report_match_status(int trace);
 
 /* Interface provided by CPU-specific code: */
 
