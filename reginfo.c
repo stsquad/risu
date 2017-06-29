@@ -39,7 +39,10 @@ int send_register_info(write_fn write_fn, void *uc)
 
     switch (op) {
     case OP_TESTEND:
-        return write_fn(&ri, sizeof(ri));
+        write_fn(&ri, sizeof(ri));
+        /* if we are tracing write_fn will return 0 unlike a remote
+           end, hence we force return of 1 here */
+        return 1;
     case OP_SETMEMBLOCK:
         memblock = (void *)(uintptr_t)get_reginfo_paramreg(&ri);
         break;
