@@ -262,7 +262,7 @@ Valid options:
                    These REs are applied after the matching pattern which
                    is useful if you want to exclude a specific instruction from
                    a general set you have excluded.
-     --no-fp      : disable floating point: no fp init, randomization etc.
+    --no-fp      : disable floating point: no fp init, randomization etc.
                    Useful to test before support for FP is available.
     --be         : generate instructions in Big-Endian byte order (ppc64 only).
     --help       : print this message
