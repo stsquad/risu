@@ -39,7 +39,7 @@
 
 ;;; Code
 
-(define-derived-mode risu-mode fundamental-mode "RISU"
+(define-derived-mode risu-mode text-mode "RISU"
   "Major mode for editing RISU control files."
   (set (make-local-variable 'font-lock-defaults) '(risu-font-lock-keywords)))
 
