@@ -138,7 +138,7 @@ int recv_and_compare_register_info(read_fn read_fn,
  * Should return 0 if it was a good match (ie end of test)
  * and 1 for a mismatch.
  */
-int report_match_status(void)
+int report_match_status(int trace)
 {
     int resp = 0;
     fprintf(stderr, "match status...\n");
@@ -148,7 +148,7 @@ int report_match_status(void)
         /* We don't have valid reginfo from the apprentice side
          * so stop now rather than printing anything about it.
          */
-        fprintf(stderr, "master reginfo:\n");
+        fprintf(stderr, "%s reginfo:\n", trace ? "this" : "master");
         reginfo_dump(&master_ri, stderr);
         return 1;
     }
@@ -166,11 +166,15 @@ int report_match_status(void)
         return 0;
     }
 
-    fprintf(stderr, "master reginfo:\n");
+    fprintf(stderr, "%s reginfo:\n", trace ? "this" : "master");
     reginfo_dump(&master_ri, stderr);
-    fprintf(stderr, "apprentice reginfo:\n");
+    fprintf(stderr, "%s reginfo:\n", trace ? "trace" : "apprentice");
     reginfo_dump(&apprentice_ri, stderr);
 
-    reginfo_dump_mismatch(&master_ri, &apprentice_ri, stderr);
+    if (trace) {
+        reginfo_dump_mismatch(&apprentice_ri, &master_ri, stderr);
+    } else {
+        reginfo_dump_mismatch(&master_ri, &apprentice_ri, stderr);
+    }
     return resp;
 }
