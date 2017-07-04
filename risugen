@@ -34,7 +34,10 @@ my @insn_keys;
 
 # The arch will be selected based on .mode directive defined in risu file.
 my $arch = "";
+# Current group, updated by @GroupName
+my $insn_group = "";
 
+my @group = ();                 # include groups
 my @pattern_re = ();            # include pattern
 my @not_pattern_re = ();        # exclude pattern
 
@@ -120,6 +123,11 @@ sub parse_config_file($)
         if (grep {/^[\{\}]$/} @tokens) {
             print STDERR "$file:$.: mismatched braces\n";
             exit(1);
+        }
+
+        if ($tokens[0] =~ /^@(.*)/ ) {
+            $insn_group = $1;
+            next;
         }
 
         if ($tokens[0] =~ /^\./) {
@@ -239,6 +247,9 @@ sub parse_config_file($)
         $insnrec->{fixedbits} = $fixedbits;
         $insnrec->{fixedbitmask} = $fixedbitmask;
         $insnrec->{fields} = [ @fields ];
+        if (length $insn_group) {
+            $insnrec->{group} = $insn_group;
+        }
         $insn_details{$insnname} = $insnrec;
     }
     close(CFILE) or die "can't close $file: $!";
@@ -249,6 +260,12 @@ sub select_insn_keys ()
 {
     # Get a list of the insn keys which are permitted by the re patterns
     @insn_keys = sort keys %insn_details;
+    if (@group) {
+        my $re = join("|",@group);
+        @insn_keys = grep {
+            defined($insn_details{$_}->{group}) &&
+                grep /$re/, $insn_details{$_}->{group}} @insn_keys
+    }
     if (@pattern_re) {
         my $re = '\b((' . join(')|(',@pattern_re) . '))\b';
         @insn_keys = grep /$re/, @insn_keys;
@@ -277,6 +294,7 @@ Valid options:
     --fpscr n    : set initial FPSCR (arm) or FPCR (aarch64) value (default is 0)
     --condprob p : [ARM only] make instructions conditional with probability p
                    (default is 0, ie all instructions are always executed)
+    --group name[,name..]: only use instructions in defined groups
     --pattern re[,re...] : only use instructions matching regular expression
                    Each re must match a full word (that is, we match on
                    the perl regex '\\b((re)|(re))\\b'). This means that
@@ -305,6 +323,7 @@ sub main()
     GetOptions( "help" => sub { usage(); exit(0); },
                 "numinsns=i" => \$numinsns,
                 "fpscr=o" => \$fpscr,
+                "group=s" => \@group,
                 "pattern=s" => \@pattern_re,
                 "not-pattern=s" => \@not_pattern_re,
                 "condprob=f" => sub {
@@ -319,6 +338,7 @@ sub main()
     # allow "--pattern re,re" and "--pattern re --pattern re"
     @pattern_re = split(/,/,join(',',@pattern_re));
     @not_pattern_re = split(/,/,join(',',@not_pattern_re));
+    @group = split(/,/,join(',',@group));
 
     if ($#ARGV != 1) {
         usage();
