@@ -17,7 +17,7 @@ test blobs (which can be run anywhere), and a Linux executable
 'risu' which runs on the target architecture (ie ARM). To
 build the executable part:
 
-    [VAR=VALUE] ... ./configure
+    [VAR=VALUE] ... ./configure [--static]
     make
 
 where [VAR=VALUE] ... allows you to specify any options.
@@ -25,6 +25,10 @@ Most useful is
  CROSS_PREFIX= which specifies the cross compiler prefix; you'll
    need this if you're not building on the target system
    (Example: CROSS_PREFIX=arm-linux-gnueabihf- )
+
+Passing --static will build a statically linked binary which is useful
+if you don't want to mess around with a chroot to run the binary.
+
 For other possibilities run 'configure --help'.
 
 Building into a separate build tree from the source code is supported:
@@ -86,8 +90,14 @@ as simple as:
 
 However since you actually need to run it under qemu or similar
 you probably need an ARM chroot to run it in, and to do something
-like
- sudo chroot /srv/chroot/arm-mav /risu --host ipaddr vqshlimm.out
+like:
+
+  sudo chroot /srv/chroot/arm-mav /risu --host ipaddr vqshlimm.out
+
+If you built the binary statically you can simply run:
+
+  /path/to/qemu ./risu --host ipaddr vqshlimm.out
+
 
 When the apprentice connects to the master, they will both start
 running the binary and checking results with each other. When the
