@@ -19,6 +19,14 @@
 # XXX NIY: SP-related instructions
 # XXX NIY: floating point and SIMD specific insns
 
+# Instruction suffixes to identify variants
+#   m - memory (loads/stores)
+#   s - scalar
+#   v - vector
+#   z - zero (e.g. compare to zero)
+#   f - fixed point
+#
+
 # - - - - 1 - 0 - - - - - - - - - - - - - - - Loads and stores
 # C3.3 Loads and stores
 
