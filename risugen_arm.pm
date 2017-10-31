@@ -895,9 +895,8 @@ sub write_test_code($$$$$$$$)
     my $fp_enabled = $params->{ 'fp_enabled' };
     my $outfile = $params->{ 'outfile' };
 
-    my @pattern_re = @{ $params->{ 'pattern_re' } };
-    my @not_pattern_re = @{ $params->{ 'not_pattern_re' } };
     my %insn_details = %{ $params->{ 'details' } };
+    my @keys = @{ $params->{ 'keys' } };
 
     open_bin($outfile);
 
@@ -908,21 +907,6 @@ sub write_test_code($$$$$$$$)
     # TODO better random number generator?
     srand(0);
 
-    # Get a list of the insn keys which are permitted by the re patterns
-    my @keys = sort keys %insn_details;
-    if (@pattern_re) {
-        my $re = '\b((' . join(')|(',@pattern_re) . '))\b';
-        @keys = grep /$re/, @keys;
-    }
-    # exclude any specifics
-    if (@not_pattern_re) {
-        my $re = '\b((' . join(')|(',@not_pattern_re) . '))\b';
-        @keys = grep !/$re/, @keys;
-    }
-    if (!@keys) {
-        print STDERR "No instruction patterns available! (bad config file or --pattern argument?)\n";
-        exit(1);
-    }
     print "Generating code using patterns: @keys...\n";
     progress_start(78, $numinsns);
 

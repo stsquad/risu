@@ -26,7 +26,11 @@ use FindBin;
 use lib "$FindBin::Bin";
 use risugen_common;
 
+# insn_details is the full set of instruction definitions whereas
+# insn_keys is array of (potentially filtered) keys to index into the
+# insn_details hash.
 my %insn_details;
+my @insn_keys;
 
 # The arch will be selected based on .mode directive defined in risu file.
 my $arch = "";
@@ -240,6 +244,26 @@ sub parse_config_file($)
     close(CFILE) or die "can't close $file: $!";
 }
 
+# Select a subset of instructions based on our filter preferences
+sub select_insn_keys ()
+{
+    # Get a list of the insn keys which are permitted by the re patterns
+    @insn_keys = sort keys %insn_details;
+    if (@pattern_re) {
+        my $re = '\b((' . join(')|(',@pattern_re) . '))\b';
+        @insn_keys = grep /$re/, @insn_keys;
+    }
+    # exclude any specifics
+    if (@not_pattern_re) {
+        my $re = '\b((' . join(')|(',@not_pattern_re) . '))\b';
+        @insn_keys = grep !/$re/, @insn_keys;
+    }
+    if (!@insn_keys) {
+        print STDERR "No instruction patterns available! (bad config file or --pattern argument?)\n";
+        exit(1);
+    }
+}
+
 sub usage()
 {
     print <<EOT;
@@ -306,6 +330,8 @@ sub main()
 
     parse_config_file($infile);
 
+    select_insn_keys();
+
     my @full_arch = split(/\./, $arch);
     my $module = "risugen_$full_arch[0]";
     load $module, qw/write_test_code/;
@@ -316,9 +342,8 @@ sub main()
         'numinsns' => $numinsns,
         'fp_enabled' => $fp_enabled,
         'outfile' => $outfile,
-        'pattern_re' => \@pattern_re,
-        'not_pattern_re' => \@not_pattern_re,
         'details' => \%insn_details,
+        'keys' => \@insn_keys,
         'arch' => $full_arch[0],
         'subarch' => $full_arch[1] || '',
         'bigendian' => $big_endian
