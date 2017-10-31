@@ -282,6 +282,21 @@ void usage(void)
             "(default 9191)\n");
 }
 
+struct option * setup_options(char **short_opts)
+{
+    static struct option default_longopts[] = {
+        {"help", no_argument, 0, '?'},
+        {"master", no_argument, &ismaster, 1},
+        {"host", required_argument, 0, 'h'},
+        {"port", required_argument, 0, 'p'},
+        {"test-fp-exc", no_argument, &test_fp_exc, 1},
+        {0, 0, 0, 0}
+    };
+
+    *short_opts = "h:p:t:";
+    return default_longopts;
+}
+
 int main(int argc, char **argv)
 {
     /* some handy defaults to make testing easier */
@@ -289,20 +304,14 @@ int main(int argc, char **argv)
     char *hostname = "localhost";
     char *imgfile;
     char *trace_fn = NULL;
+    struct option *longopts;
+    char *shortopts;
 
-    /* TODO clean this up later */
+    longopts = setup_options(&shortopts);
 
     for (;;) {
-        static struct option longopts[] = {
-            {"help", no_argument, 0, '?'},
-            {"master", no_argument, &ismaster, 1},
-            {"host", required_argument, 0, 'h'},
-            {"port", required_argument, 0, 'p'},
-            {"test-fp-exc", no_argument, &test_fp_exc, 1},
-            {0, 0, 0, 0}
-        };
         int optidx = 0;
-        int c = getopt_long(argc, argv, "h:p:t:", longopts, &optidx);
+        int c = getopt_long(argc, argv, shortopts, longopts, &optidx);
         if (c == -1) {
             break;
         }
