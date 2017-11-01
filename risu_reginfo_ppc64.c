@@ -22,6 +22,9 @@
 #define XER 37
 #define CCR 38
 
+void *arch_long_opts;
+char *arch_extra_help;
+
 /* reginfo_init: initialize with a ucontext */
 void reginfo_init(struct reginfo *ri, ucontext_t *uc)
 {
