@@ -61,7 +61,7 @@ done
 # If docker is enabled we just brute force the various images until we
 # can set the one that has a workable cross compiler.
 
-DOCKER_RUN="docker run --rm -t -u $(id -u) -v $(pwd):$(pwd) -w $(pwd)"
+DOCKER_RUN="docker run --rm -u $(id -u) -v $(pwd):$(pwd) -w $(pwd)"
 
 program_exists() {
     if [ ! -z "$docker_tags" ]; then
