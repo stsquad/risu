@@ -17,6 +17,10 @@
 #include <ucontext.h>
 #include <stdio.h>
 
+/* Extra option processing for architectures */
+extern void *arch_long_opts;
+extern char *arch_extra_help;
+
 /* GCC computed include to pull in the correct risu_reginfo_*.h for
  * the architecture.
  */
@@ -35,8 +39,6 @@ void send_response_byte(int sock, int resp);
 
 extern uintptr_t image_start_address;
 extern void *memblock;
-
-extern int test_fp_exc;
 
 /* Ops code under test can request from risu: */
 #define OP_COMPARE 0
