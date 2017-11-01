@@ -43,8 +43,7 @@ gzFile gz_trace_file;
 
 sigjmp_buf jmpbuf;
 
-/* Should we test for FP exception status bits? */
-int test_fp_exc;
+#define ARRAY_SIZE(x)	(sizeof(x) / sizeof((x)[0]))
 
 /* Master functions */
 
@@ -280,6 +279,9 @@ void usage(void)
     fprintf(stderr,
             "  -p, --port=PORT   Specify the port to connect to/listen on "
             "(default 9191)\n");
+    if (arch_extra_help) {
+        fprintf(stderr, "%s", arch_extra_help);
+    }
 }
 
 struct option * setup_options(char **short_opts)
@@ -290,12 +292,31 @@ struct option * setup_options(char **short_opts)
         {"host", required_argument, 0, 'h'},
         {"port", required_argument, 0, 'p'},
         {"trace", required_argument, 0, 't'},
-        {"test-fp-exc", no_argument, &test_fp_exc, 1},
         {0, 0, 0, 0}
     };
+    struct option *lopts = &default_longopts[0];
 
     *short_opts = "h:p:t:";
-    return default_longopts;
+
+    if (arch_long_opts) {
+        const size_t osize = sizeof(struct option);
+        const int default_count = ARRAY_SIZE(default_longopts);
+        struct option *dptr;
+        int extra_count = 0;
+
+        /* count additional opts */
+        dptr = arch_long_opts;
+        do {} while (dptr[extra_count++].name);
+
+        lopts = calloc(default_count + extra_count, osize);
+
+        /* Copy default opts + extra opts */
+        memcpy(lopts, default_longopts, default_count * osize);
+        dptr = &lopts[default_count - 1];
+        memcpy(dptr, arch_long_opts, extra_count * osize);
+    }
+
+    return lopts;
 }
 
 int main(int argc, char **argv)
