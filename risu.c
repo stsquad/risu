@@ -43,9 +43,6 @@ gzFile gz_trace_file;
 
 sigjmp_buf jmpbuf;
 
-/* Should we test for FP exception status bits? */
-int test_fp_exc;
-
 /* Master functions */
 
 int read_sock(void *ptr, size_t bytes)
@@ -280,6 +277,9 @@ void usage(void)
     fprintf(stderr,
             "  -p, --port=PORT   Specify the port to connect to/listen on "
             "(default 9191)\n");
+    if (arch_extra_help) {
+        fprintf(stderr, "%s", arch_extra_help);
+    }
 }
 
 struct option * setup_options(char **short_opts)
@@ -290,12 +290,33 @@ struct option * setup_options(char **short_opts)
         {"host", required_argument, 0, 'h'},
         {"port", required_argument, 0, 'p'},
         {"trace", required_argument, 0, 't'},
-        {"test-fp-exc", no_argument, &test_fp_exc, 1},
         {0, 0, 0, 0}
     };
+    struct option *lopts = &default_longopts[0];
 
     *short_opts = "h:p:t:";
-    return default_longopts;
+
+    if (arch_long_opts) {
+        struct option *dptr, *sptr;
+        size_t osize = sizeof(default_longopts);
+        lopts = malloc(osize);
+        /* Copy default opts */
+        memcpy(lopts, default_longopts, osize);
+        dptr = lopts;
+        while (dptr->name) {
+            dptr++;
+        }
+        /* Copy extra opts */
+        sptr = arch_long_opts;
+        while (sptr->name) {
+            osize += sizeof(struct option);
+            lopts = realloc(lopts, osize);
+            *dptr++ = *sptr++;
+        }
+        memset(dptr, 0, sizeof(struct option));
+    }
+
+    return lopts;
 }
 
 int main(int argc, char **argv)
