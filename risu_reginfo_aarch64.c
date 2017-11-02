@@ -141,6 +141,18 @@ int reginfo_is_eq(struct reginfo *r1, struct reginfo *r2)
     return memcmp(r1, r2, sizeof(*r1)) == 0;
 }
 
+#ifdef SVE_MAGIC
+static int sve_zreg_is_eq(struct reginfo *r1, struct reginfo *r2, int z)
+{
+    return memcmp(r1->zregs[z], r2->zregs[z], sizeof(*r1->zregs[z])) == 0;
+}
+
+static int sve_preg_is_eq(struct reginfo *r1, struct reginfo *r2, int p)
+{
+    return memcmp(r1->pregs[p], r2->pregs[p], sizeof(*r1->pregs[p])) == 0;
+}
+#endif
+
 /* reginfo_dump: print state to a stream, returns nonzero on success */
 int reginfo_dump(struct reginfo *ri, FILE * f)
 {
@@ -215,6 +227,43 @@ int reginfo_dump_mismatch(struct reginfo *m, struct reginfo *a, FILE * f)
                     (uint64_t) (a->vregs[i] & 0xffffffffffffffff));
         }
     }
+
+#ifdef SVE_MAGIC
+    if (test_sve) {
+        if (m->vl != a->vl) {
+            fprintf(f, "  SVE VL  : %d vs %d\n", m->vl, a->vl);
+        }
+        for (i = 0; i < SVE_NUM_PREGS; i++) {
+           if (!sve_preg_is_eq(m, a, i)) {
+              int q;
+              fprintf(f, "  P%2d   : ", i);
+              for (q = 0; q < sve_vq_from_vl(m->vl); q++) {
+                 fprintf(f, "%04x", m->pregs[i][q]);
+              }
+              fprintf(f, " vs ");
+              for (q = 0; q < sve_vq_from_vl(m->vl); q++) {
+                 fprintf(f, "%04x", a->pregs[i][q]);
+              }
+              fprintf(f, "\n");
+            }
+        }
+        for (i = 0; i < SVE_NUM_ZREGS; i++) {
+           if (!sve_zreg_is_eq(m, a, i)) {
+              int q;
+              char *pad="";
+              fprintf(f, "  Z%2d   : ", i);
+              for (q = 0; q < sve_vq_from_vl(m->vl); q++) {
+                 if (m->zregs[i][q] != a->zregs[i][q]) {
+                    fprintf(f, "%sq%02d: %016" PRIx64 "%016" PRIx64 " vs %016" PRIx64 "%016" PRIx64"\n", pad, q,
+                            (uint64_t) (m->zregs[i][q] >> 64), (uint64_t) m->zregs[i][q],
+                            (uint64_t) (a->zregs[i][q] >> 64), (uint64_t) a->zregs[i][q]);
+                    pad = "          ";
+                 }
+              }
+           }
+        }
+    }
+#endif
 
     return !ferror(f);
 }
