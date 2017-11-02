@@ -26,6 +26,12 @@ Most useful is
    need this if you're not building on the target system
    (Example: CROSS_PREFIX=arm-linux-gnueabihf- )
 
+Another useful flag is
+ CPPFLAGS= which specified pre-processor flags, usually -I statements
+   for specifying extra include paths. Use this is you need something
+   from new kernel headers not installed on your system.
+   (Example: CPPFLAGS=-I/path/to/sve-kernel-headers/include)
+
 Passing --static will build a statically linked binary which is useful
 if you don't want to mess around with a chroot to run the binary.
 
