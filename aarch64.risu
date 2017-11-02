@@ -2968,3 +2968,26 @@ SHA512SU0 A64_V 1100 1110 1100 0000 1000 00 rn:5 rd:5
 SM4E      A64_V 1100 1110 1100 0000 1000 01 rn:5 rd:5
 
 @
+# SVE Instructions
+# Top-level Encodings
+#
+# 31            24 | 23 22 | 21      17 | 16 | 15    10 | 9                 0
+#  y y y y y y y m |  -  - |  m m m m m |  - |          | - - - - - - - - - -
+#
+@SVE
+
+# SVE Integer Arithmetic - Binary Predicated Group
+# 31            24 | 23  22 | 21 | 20  19 | 18 16 | 15  13 | 12           0
+#  0 0 0 0 0 1 0 0 |  size  |  0 |   op   |  ---  |  0 0 0 | ------------- |
+
+SVE_INTA_PRED_UNALL A64_V 00000100 ig:2 010 001 000 ignore2:13
+
+# - SVE integer add/subtract vectors (predicated)
+# 31            24 | 23 22 | 21  19 | 18 16 | 15  13 | 12  10 | 9  5 | 4  0 |
+#  0 0 0 0 0 1 0 0 |  size |  0 0 0 |  opc  |  0 0 0 |   Pg   |  Zm  |  Zn  |
+# opc 010/1xx are UNALLOCATED
+
+SVE_INT_ADDSUB_PRED A64_V 00000100 sz:2 000 opc:3 000 pg:3 zm:5 zn:5
+
+@
+# End of SVE instructions
