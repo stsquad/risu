@@ -13,12 +13,78 @@
 #include <stdio.h>
 #include <ucontext.h>
 #include <string.h>
+#include <getopt.h>
+#include <stdlib.h>
+#include <stdbool.h>
 
 #include "risu.h"
 #include "risu_reginfo_aarch64.h"
 
+#ifndef SVE_MAGIC
 void *arch_long_opts;
 char *arch_extra_help;
+#else
+/* Should we test SVE register state */
+static int test_sve;
+static struct option extra_opts[] = {
+    {"test-sve", no_argument, &test_sve, 1},
+    {0, 0, 0, 0}
+};
+
+void *arch_long_opts = &extra_opts[0];
+char *arch_extra_help = "  --test-sve        Compare SVE registers\n";
+
+/* Extra SVE copy function, only called with --test-sve */
+static void reginfo_copy_sve(struct reginfo *ri, struct _aarch64_ctx *ctx)
+{
+    struct sve_context *sve;
+    int r, vq;
+    bool found = false;
+
+    while (!found) {
+       switch (ctx->magic)
+       {
+          case SVE_MAGIC:
+             found = true;
+             break;
+          case EXTRA_MAGIC:
+             fprintf(stderr, "%s: found EXTRA_MAGIC\n", __func__);
+             abort();
+          case 0:
+             /* We might not have an SVE context */
+             fprintf(stderr, "%s: reached end of ctx, no joy (%d)\n", __func__, ctx->size);
+             return;
+          default:
+             ctx = (struct _aarch64_ctx *)((void *)ctx + ctx->size);
+             break;
+       }
+
+    }
+
+    sve = (struct sve_context *) ctx;
+    ri->vl = sve->vl;
+    vq = sve_vq_from_vl(sve->vl); /* number of quads for whole vl */
+
+    /* Copy ZREG's one at a time */
+    for (r = 0; r < SVE_NUM_ZREGS; r++) {
+        memcpy(&ri->zregs[r],
+               (char *)sve + SVE_SIG_ZREG_OFFSET(vq, r),
+               SVE_SIG_ZREG_SIZE(vq));
+    }
+
+    /* Copy PREG's one at a time */
+    for (r = 0; r < SVE_NUM_PREGS; r++) {
+        memcpy(&ri->pregs[r],
+               (char *)sve + SVE_SIG_PREG_OFFSET(vq, r),
+               SVE_SIG_PREG_SIZE(vq));
+    }
+
+    /* Finally the FFR */
+    memcpy(&ri->ffr,(char *)sve + SVE_SIG_FFR_OFFSET(vq),
+               SVE_SIG_FFR_SIZE(vq));
+
+}
+#endif
 
 /* reginfo_init: initialize with a ucontext */
 void reginfo_init(struct reginfo *ri, ucontext_t *uc)
@@ -26,6 +92,7 @@ void reginfo_init(struct reginfo *ri, ucontext_t *uc)
     int i;
     struct _aarch64_ctx *ctx;
     struct fpsimd_context *fp;
+
     /* necessary to be able to compare with memcmp later */
     memset(ri, 0, sizeof(*ri));
 
@@ -59,6 +126,13 @@ void reginfo_init(struct reginfo *ri, ucontext_t *uc)
     for (i = 0; i < 32; i++) {
         ri->vregs[i] = fp->vregs[i];
     }
+
+#ifdef SVE_MAGIC
+    if (test_sve) {
+        ctx = (struct _aarch64_ctx *) &uc->uc_mcontext.__reserved[0];
+        reginfo_copy_sve(ri, ctx);
+    }
+#endif
 };
 
 /* reginfo_is_eq: compare the reginfo structs, returns nonzero if equal */
