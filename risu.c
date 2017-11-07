@@ -289,6 +289,7 @@ struct option * setup_options(char **short_opts)
         {"master", no_argument, &ismaster, 1},
         {"host", required_argument, 0, 'h'},
         {"port", required_argument, 0, 'p'},
+        {"trace", required_argument, 0, 't'},
         {"test-fp-exc", no_argument, &test_fp_exc, 1},
         {0, 0, 0, 0}
     };
