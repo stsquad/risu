@@ -176,10 +176,10 @@ fi
 
 # Are we in a separate build tree? If so, link the Makefile
 # so that 'make' works.
-if test ! -e Makefile; then
+if test ! -e Makefile || test -s Makefile; then
     echo "linking Makefile..."
     BUILD_INC="-I $(pwd)"
-    ln -s "${SRCDIR}/Makefile" .
+    ln -sf "${SRCDIR}/Makefile" .
 fi
 
 generate_config
