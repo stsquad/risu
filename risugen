@@ -317,6 +317,7 @@ sub main()
     my $condprob = 0;
     my $fpscr = 0;
     my $fp_enabled = 1;
+    my $sve_enabled = 1;
     my $big_endian = 0;
     my ($infile, $outfile);
 
@@ -334,6 +335,7 @@ sub main()
                 },
                 "be" => sub { $big_endian = 1; },
                 "no-fp" => sub { $fp_enabled = 0; },
+                "sve" => sub { $sve_enabled = 1; },
         ) or return 1;
     # allow "--pattern re,re" and "--pattern re --pattern re"
     @pattern_re = split(/,/,join(',',@pattern_re));
@@ -361,6 +363,7 @@ sub main()
         'fpscr' => $fpscr,
         'numinsns' => $numinsns,
         'fp_enabled' => $fp_enabled,
+        'sve_enabled' => $sve_enabled,
         'outfile' => $outfile,
         'details' => \%insn_details,
         'keys' => \@insn_keys,

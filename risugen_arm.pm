@@ -472,15 +472,57 @@ sub write_random_aarch64_fpdata()
     }
 }
 
-sub write_random_aarch64_regdata($)
+sub write_random_aarch64_svedata()
 {
-    my ($fp_enabled) = @_;
+    # Load SVE registers
+    my $align = 16;
+    my $vl = 16;                             # number of vqs
+    my $datalen = (32 * $vl * 16) + $align;
+
+    write_pc_adr(0, (3 * 4) + ($align - 1)); # insn 1
+    write_align_reg(0, $align);              # insn 2
+    write_jump_fwd($datalen);                # insn 3
+
+    # align safety
+    for (my $i = 0; $i < ($align / 4); $i++) {
+        # align with nops
+        insn32(0xd503201f);
+    };
+
+    for (my $rt = 0; $rt <= 31; $rt++) {
+        for (my $q = 0; $q < $vl; $q++) {
+            write_random_fpreg_var(4); # quad
+        }
+    }
+
+    # Reset all the predicate registers to all true
+    for (my $p = 0; $p < 16; $p++) {
+        insn32(0x2518e3e0 | $p);
+    }
+
+    # there is no post index load so we do this by hand
+    write_mov_ri(1, 0);
+    for (my $rt = 0; $rt <= 31; $rt++) {
+        # ld1d    z0.d, p0/z, [x0, x1, lsl #3]
+        insn32(0xa5e14000 | $rt);
+        # incp    x1, p0.d
+        insn32(0x25ec8801);
+    }
+}
+
+sub write_random_aarch64_regdata($$)
+{
+    my ($fp_enabled, $sve_enabled) = @_;
     # clear flags
     insn32(0xd51b421f);     # msr nzcv, xzr
 
     if ($fp_enabled) {
         # load floating point / SIMD registers
         write_random_aarch64_fpdata();
+    }
+
+    if ($sve_enabled) {
+        write_random_aarch64_svedata();
     }
 
     # general purpose registers
@@ -490,12 +532,12 @@ sub write_random_aarch64_regdata($)
     }
 }
 
-sub write_random_register_data($)
+sub write_random_register_data($$)
 {
-    my ($fp_enabled) = @_;
+    my ($fp_enabled, $sve_enabled) = @_;
 
     if ($is_aarch64) {
-        write_random_aarch64_regdata($fp_enabled);
+        write_random_aarch64_regdata($fp_enabled, $sve_enabled);
     } else {
         write_random_arm_regdata($fp_enabled);
     }
@@ -893,6 +935,7 @@ sub write_test_code($$$$$$$$)
     my $fpscr = $params->{ 'fpscr' };
     my $numinsns = $params->{ 'numinsns' };
     my $fp_enabled = $params->{ 'fp_enabled' };
+    my $sve_enabled = $params->{ 'sve_enabled' };
     my $outfile = $params->{ 'outfile' };
 
     my %insn_details = %{ $params->{ 'details' } };
@@ -918,7 +961,7 @@ sub write_test_code($$$$$$$$)
         write_memblock_setup();
     }
     # memblock setup doesn't clean its registers, so this must come afterwards.
-    write_random_register_data($fp_enabled);
+    write_random_register_data($fp_enabled, $sve_enabled);
     write_switch_to_test_mode();
 
     for my $i (1..$numinsns) {
@@ -930,7 +973,7 @@ sub write_test_code($$$$$$$$)
         # Rewrite the registers periodically. This avoids the tendency
         # for the VFP registers to decay to NaNs and zeroes.
         if ($periodic_reg_random && ($i % 100) == 0) {
-            write_random_register_data($fp_enabled);
+            write_random_register_data($fp_enabled, $sve_enabled);
             write_switch_to_test_mode();
         }
         progress_update($i);
