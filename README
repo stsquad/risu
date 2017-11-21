@@ -27,10 +27,14 @@ Most useful is
    (Example: CROSS_PREFIX=arm-linux-gnueabihf- )
 
 Another useful flag is
- CPPFLAGS= which specifies pre-processor flags, usually -I statements
-   for specifying extra include paths. Use this if you need something
-   from new kernel headers not installed on your system, for instance.
-   (Example: CPPFLAGS=-I/path/to/new-kernel-headers/include)
+ CPPFLAGS= which specified pre-processor flags; this is usually -I
+   statements for specifying extra include paths. Use this if you
+   need something from new kernel headers.
+   (Example:
+     install kernel uapi headers:
+       make INSTALL_HDR_PATH=/path/to/sve-headers/ headers_install
+     call risu configure with:
+       CPPFLAGS=-I/path/to/sve-headers/include)
 
 Passing --static will build a statically linked binary which is useful
 if you don't want to mess around with a chroot to run the binary.
