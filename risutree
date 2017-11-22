@@ -1,0 +1,357 @@
+#!/usr/bin/perl -w
+###############################################################################
+# Copyright (c) 2010 Linaro Limited
+# All rights reserved. This program and the accompanying materials
+# are made available under the terms of the Eclipse Public License v1.0
+# which accompanies this distribution, and is available at
+# http://www.eclipse.org/legal/epl-v10.html
+#
+# Contributors:
+#     Peter Maydell (Linaro) - initial implementation
+#     Claudio Fontana (Linaro) - initial aarch64 support
+#     Jose Ricardo Ziviani (IBM) - initial ppc64 support and arch isolation
+###############################################################################
+
+# risugen -- generate a test binary file for use with risu
+# See 'risugen --help' for usage information.
+
+use strict;
+use Getopt::Long;
+use Data::Dumper;
+use Module::Load;
+use Text::Balanced qw { extract_bracketed extract_multiple };
+# Make sure we can find the per-CPU-architecture modules in the
+# same directory as this script.
+use FindBin;
+use lib "$FindBin::Bin";
+use risugen_common;
+
+my %insn_details;
+
+# The arch will be selected based on .mode directive defined in risu file.
+my $arch = "";
+
+my @pattern_re = ();            # include pattern
+my @not_pattern_re = ();        # exclude pattern
+
+# Valid block names (keys in blocks hash)
+my %valid_blockname = ( constraints => 1, memory => 1 );
+
+sub parse_risu_directive($$@)
+{
+    # Parse a line beginning with ".", which is a directive used
+    # to affect how risu/risugen should behave rather than an insn pattern.
+
+    # At the moment we only support one directive:
+    #  .mode modename
+    # where modename can be "arm" or "thumb"
+    my ($file, $seen_pattern, $dirname, @rest) = @_;
+    if ($dirname eq ".mode") {
+        if ($seen_pattern != 0) {
+            print STDERR "$file:$.: .mode directive must precede all instruction patterns\n";
+            exit(1);
+        }
+        if ($#rest != 0) {
+            print STDERR "$file:$.: wrong number of arguments to .mode\n";
+            exit(1);
+        }
+        $arch = $rest[0];
+    } else {
+        print STDERR "$file:$.: unknown directive $dirname\n";
+        exit(1);
+    }
+}
+
+sub read_tokenised_line(*)
+{
+    # Read a tokenised line from the config file.
+    # For our purposes, tokens are generally whitespace
+    # separated, but any token beginning with a '{'
+    # continues until we have encountered the matching '}'
+    # (including counting in and out any nested {} within it).
+    # This is also where we deal with blank lines, comments
+    # and line continuation characters.
+    # Any mismatched braces will manifest as a single '{'
+    # or '}' token in the output.
+    my ($fh) = @_;
+    my $line = '';
+    while (<$fh>) {
+        chomp;
+        $line .= $_;
+        next if $line =~ s/\\$//;
+        $line =~ s/#.*$//;
+        next if $line =~ /^\s*$/;
+        last;
+    }
+    #print "got final line:\n";
+    #print "$line\n";
+
+    my (@tokens) = extract_multiple($line,
+                                    [ sub { extract_bracketed($_[0],'{}') },
+                                      qr/([^{} ]+)/,
+                                      qr/([{}]+)/,
+                                    ], undef, 1);
+
+    #print "Tokenised as:\n";
+    #print Dumper(@tokens), "\n";
+    return @tokens;
+}
+
+sub parse_config_file($)
+{
+    # Read in the config file defining the instructions we can generate
+    my ($file) = @_;
+    # See the README for details of the format we are parsing here.
+
+    # Our data structure here is fairly simple:
+    # an assoc array %insn_details whose keys are "insn_enc" strings
+    # and whose values are array references. Each array is, in order:
+    # insnwidth, fixedbits, fixedbitmask, constraint, var,bitpos,mask , var,bitpos,mask ...
+
+    my ($seen_pattern) = 0;
+    my @tokens;
+    open(CFILE, $file) or die "can't open $file: $!";
+    while (@tokens = read_tokenised_line(CFILE))
+    {
+        if (grep {/^[\{\}]$/} @tokens) {
+            print STDERR "$file:$.: mismatched braces\n";
+            exit(1);
+        }
+
+        if ($tokens[0] =~ /^\./) {
+            parse_risu_directive($file, $seen_pattern, @tokens);
+            next;
+        }
+        $seen_pattern = 1;
+
+        my $insnrec = {};
+        my @fields = ();
+
+        my ($insn, $enc, @bits) = @tokens;
+        if (!defined $enc) {
+            print STDERR "$file:$.: no insn or encoding?\n";
+            exit(1);
+        }
+        if ($insn !~ /^[A-Za-z0-9][A-Za-z0-9_]*$/) {
+            print STDERR "$file:$.: invalid insn name $insn ";
+            print STDERR "(possibly missing line continuation character?)\n";
+            exit(1);
+        }
+        if ($enc !~ /^[A-Za-z0-9][A-Za-z0-9_]*$/) {
+            print STDERR "$file:$.: invalid encoding name $enc\n";
+            exit(1);
+        }
+        my $insnname = "${insn} ${enc}";
+        if (exists $insn_details{$insnname}) {
+            print STDERR "$file:$.: redefinition of $insnname\n";
+            exit(1);
+        }
+
+        my $fixedbits = 0;
+        my $fixedbitmask = 0;
+        my $bitpos = 32;
+        my $insnwidth = 32;
+        my $seenblock = 0;
+
+        while (@bits) {
+            my $bit = shift @bits;
+            my $bitlen;
+            my $bitval;
+            my $var;
+
+            if ($bit =~ /^\!/) {
+                # A named block
+                my $blockname = $bit;
+                $blockname =~ s/^!//;
+                my $block = shift @bits;
+                if (!defined $block || $block !~ /^{/) {
+                    print STDERR "$file:$.: expected block following '!$blockname'\n";
+                    exit(1);
+                }
+                if (!$valid_blockname{$blockname}) {
+                    print STDERR "$file:$.: unknown block name '$blockname'\n";
+                    exit(1);
+                }
+                $insnrec->{blocks}{$blockname} = $block;
+                $seenblock++;
+                next;
+            } elsif ($bit =~ /^{/) {
+                # An unnamed block is constraints, for backcompatibility
+                $insnrec->{blocks}{"constraints"} = $bit;
+                $seenblock++;
+                next;
+            } elsif ($bit =~ /^[01]*$/) {
+                # fixed bits
+                $bitlen = length($bit);
+                $bitval = oct("0b".$bit);
+            } elsif ($bit =~ /^([a-zA-Z][a-zA-Z0-9]*):([0-9]+)$/) {
+                # variable field
+                $var = $1;
+                $bitlen = $2;
+            } elsif($bit =~ /^([a-zA-Z][a-zA-Z0-9]*)$/) {
+                # single bit variable field
+                $var = $1;
+                $bitlen = 1;
+            } else {
+                print STDERR "$file:$.: ($insn $enc) unrecognised bitfield specifier $bit\n";
+                exit(1);
+            }
+
+            if ($seenblock) {
+                print STDERR "$file:$.: blocks may not occur in the middle of a pattern\n";
+                exit(1);
+            }
+
+            my $bitmask = oct("0b". '1' x $bitlen);
+            $bitpos -= $bitlen;
+            if ($bitpos < 0) {
+                print STDERR "$file:$.: ($insn $enc) too many bits specified\n";
+                exit(1);
+            }
+
+            if (defined $bitval) {
+                $fixedbits |= ($bitval << $bitpos);
+                $fixedbitmask |= ($bitmask << $bitpos);
+            } else {
+                push @fields, [ $var, $bitpos, $bitmask ];
+            }
+        }
+        if ($bitpos == 16) {
+            # assume this is a half-width thumb instruction
+            # Note that we don't fiddle with the bitmasks or positions,
+            # which means the generated insn will be in the high halfword!
+            $insnwidth = 16;
+        } elsif ($bitpos != 0) {
+            print STDERR "$file:$.: ($insn $enc) not enough bits specified\n";
+            exit(1);
+        }
+        if ((($fixedbits & $fixedbitmask) != $fixedbits)
+            || (($fixedbits & ~$fixedbitmask) != 0)) {
+            die "internal error: fixed bits not lined up with mask";
+        }
+        #  Stick the fixedbit info on the front of the array now we know it
+        $insnrec->{name} = $insnname;
+        $insnrec->{width} = $insnwidth;
+        $insnrec->{fixedbits} = $fixedbits;
+        $insnrec->{fixedbitmask} = $fixedbitmask;
+        $insnrec->{fields} = [ @fields ];
+        $insn_details{$insnname} = $insnrec;
+    }
+    close(CFILE) or die "can't close $file: $!";
+}
+
+sub usage()
+{
+    print <<EOT;
+Usage: risugen [options] inputfile outputfile
+
+where inputfile is a configuration file specifying instruction patterns
+and outputfile is the generated raw binary file.
+
+Valid options:
+    --numinsns n : generate n instructions (default is 10000)
+    --fpscr n    : set initial FPSCR (arm) or FPCR (aarch64) value (default is 0)
+    --condprob p : [ARM only] make instructions conditional with probability p
+                   (default is 0, ie all instructions are always executed)
+    --pattern re[,re...] : only use instructions matching regular expression
+                   Each re must match a full word (that is, we match on
+                   the perl regex '\\b((re)|(re))\\b'). This means that
+                   'VMULL' will match 'VMULL A1' and 'VMULL A2' but not
+                   'VMULL_scalar A1'. This is generally what you wanted.
+    --not-pattern re[,re...] : exclude patterns matching regular expression.
+                   These REs are applied after the matching pattern which
+                   is useful if you want to exclude a specific instruction from
+                   a general set you have excluded.
+    --no-fp      : disable floating point: no fp init, randomization etc.
+                   Useful to test before support for FP is available.
+    --be         : generate instructions in Big-Endian byte order (ppc64 only).
+    --help       : print this message
+EOT
+}
+
+sub tree($$$$)
+{
+  my ($level, $fixbits, $fixmask, $levelmask) = @_;
+
+  my $mask = ~$fixmask;
+  my $count = 0;
+  my %insns = ();
+  foreach my $k (keys %insn_details) {
+    my $i = $insn_details{$k};
+    my $fb = $i->{fixedbits};
+    my $fm = $i->{fixedbitmask};
+
+    if (($fixmask & $fb) == $fixbits && ($fixmask &~ $fm) == 0) {
+      $insns{$fb} = $i;
+      $mask &= $fm;
+      ++$count;
+    }
+  }
+  if ($mask == 0) {
+    return;
+  }
+
+  printf "path %s -- %08x %08x\n", $level, $fixbits, $fixmask;
+  printf "  %08x common mask\n", $mask;
+
+  my %buckets = ();
+  foreach my $fb (sort keys %insns) {
+    my $i = $insns{$fb};
+    printf "  %08x %s\n", $fb & $mask, $i->{name};
+    $buckets{$mask & $fb} = $i;
+  }
+  printf "\n";
+
+  if ($count < 2) {
+    return;
+  }
+  my $l = 0;
+  foreach my $sub (sort keys %buckets) {
+    tree($level . $l, $fixbits | $sub, $fixmask | $mask, $mask);
+    ++$l;
+  }
+}
+
+sub main()
+{
+    my $numinsns = 10000;
+    my $condprob = 0;
+    my $fpscr = 0;
+    my $fp_enabled = 1;
+    my $big_endian = 0;
+    my ($infile, $outfile);
+
+    GetOptions( "help" => sub { usage(); exit(0); },
+                "numinsns=i" => \$numinsns,
+                "fpscr=o" => \$fpscr,
+                "pattern=s" => \@pattern_re,
+                "not-pattern=s" => \@not_pattern_re,
+                "condprob=f" => sub {
+                    $condprob = $_[1];
+                    if ($condprob < 0.0 || $condprob > 1.0) {
+                        die "Value \"$condprob\" invalid for option condprob (must be between 0 and 1)\n";
+                    }
+                },
+                "be" => sub { $big_endian = 1; },
+                "no-fp" => sub { $fp_enabled = 0; },
+        ) or return 1;
+    # allow "--pattern re,re" and "--pattern re --pattern re"
+    @pattern_re = split(/,/,join(',',@pattern_re));
+    @not_pattern_re = split(/,/,join(',',@not_pattern_re));
+
+    if ($#ARGV != 1) {
+        usage();
+        return 1;
+    }
+
+    $infile = $ARGV[0];
+    $outfile = $ARGV[1];
+
+    parse_config_file($infile);
+
+    tree("", 0, 0, -1);
+
+    return 0;
+}
+
+exit(main);
