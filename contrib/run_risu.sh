@@ -13,6 +13,7 @@
 #
 # Usage:
 #   (optional) export QEMU=/path/to/qemu
+#   (optional) export QEMU_FLAGS="-cpu any,fp16=off"
 #   (optional) export RISU=/path/to/risu
 #   ./run_risu.sh  ./testcases.aarch64/*.bin
 
@@ -29,9 +30,10 @@ fi
 
 for f in $@; do
     t="$f.trace"
-    echo "Running $f against $t"
+    CMD="${QEMU} ${QEMU_FLAGS} ${RISU} $f -t $t"
+    echo "Running: ${CMD}"
     if [ -e $t ]; then
-        ${QEMU} ${RISU} $f -t $t
+        ${CMD}
         if [ $? == 0 ]; then
             passed=( "${passed[@]}" $f )
         else
