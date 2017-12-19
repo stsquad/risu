@@ -15,7 +15,7 @@ include Makefile.in
 
 VPATH=$(SRCDIR)
 
-CFLAGS ?= -g
+CFLAGS ?= -Og -g3 -isystem ../linux-headers
 
 ALL_CFLAGS = -Wall -D_GNU_SOURCE -DARCH=$(ARCH) $(BUILD_INC) $(CFLAGS) $(EXTRA_CFLAGS)
 
