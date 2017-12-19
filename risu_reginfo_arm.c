@@ -13,7 +13,6 @@
 #include <stdio.h>
 #include <ucontext.h>
 #include <string.h>
-#include <getopt.h>
 
 #include "risu.h"
 #include "risu_reginfo_arm.h"
@@ -22,13 +21,19 @@ extern int insnsize(ucontext_t *uc);
 
 /* Should we test for FP exception status bits? */
 static int test_fp_exc;
-static struct option extra_opts[] = {
+static const struct option extra_opts[] = {
     {"test-fp-exc", no_argument, &test_fp_exc, 1},
     {0, 0, 0, 0}
 };
 
-void *arch_long_opts = &extra_opts[0];
-char *arch_extra_help = "  --test-fp-exc     Check FP exception bits when comparing\n";
+const struct option * const arch_long_opts = &extra_opts[0];
+const char * const arch_extra_help =
+    "  --test-fp-exc     Check FP exception bits when comparing\n";
+
+void process_arch_opt(int opt, const char *arg)
+{
+    abort();
+}
 
 static void reginfo_init_vfp(struct reginfo *ri, ucontext_t *uc)
 {

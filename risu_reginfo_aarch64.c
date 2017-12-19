@@ -13,7 +13,6 @@
 #include <stdio.h>
 #include <ucontext.h>
 #include <string.h>
-#include <getopt.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <inttypes.h>
@@ -22,19 +21,27 @@
 #include "risu_reginfo_aarch64.h"
 
 #ifndef SVE_MAGIC
-void *arch_long_opts;
-char *arch_extra_help;
+const struct option * const arch_long_opts;
+const char * const arch_extra_help;
 #else
 /* Should we test SVE register state */
 static int test_sve;
-static struct option extra_opts[] = {
+static const struct option extra_opts[] = {
     {"test-sve", no_argument, &test_sve, 1},
     {0, 0, 0, 0}
 };
 
-void *arch_long_opts = &extra_opts[0];
-char *arch_extra_help = "  --test-sve        Compare SVE registers\n";
+const struct option * const arch_long_opts = &extra_opts[0];
+const char * const arch_extra_help
+    = "  --test-sve        Compare SVE registers\n";
+#endif
 
+void process_arch_opt(int opt, const char *arg)
+{
+    abort();
+}
+
+#ifdef SVE_MAGIC
 /* Extra SVE copy function, only called with --test-sve */
 static void reginfo_copy_sve(struct reginfo *ri, struct _aarch64_ctx *ctx)
 {

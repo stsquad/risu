@@ -22,8 +22,13 @@
 #define XER 37
 #define CCR 38
 
-void *arch_long_opts;
-char *arch_extra_help;
+const struct option * const arch_long_opts;
+const char * const arch_extra_help;
+
+void process_arch_opt(int opt, const char *arg)
+{
+    abort();
+}
 
 /* reginfo_init: initialize with a ucontext */
 void reginfo_init(struct reginfo *ri, ucontext_t *uc)

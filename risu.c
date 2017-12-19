@@ -18,7 +18,6 @@
 #include <errno.h>
 #include <signal.h>
 #include <ucontext.h>
-#include <getopt.h>
 #include <setjmp.h>
 #include <assert.h>
 #include <sys/stat.h>
@@ -27,7 +26,6 @@
 #include <string.h>
 
 #include "config.h"
-
 #include "risu.h"
 
 void *memblock;
@@ -284,7 +282,7 @@ void usage(void)
     }
 }
 
-struct option * setup_options(char **short_opts)
+static struct option * setup_options(char **short_opts)
 {
     static struct option default_longopts[] = {
         {"help", no_argument, 0, '?'},
@@ -300,20 +298,19 @@ struct option * setup_options(char **short_opts)
 
     if (arch_long_opts) {
         const size_t osize = sizeof(struct option);
-        const int default_count = ARRAY_SIZE(default_longopts);
-        struct option *dptr;
-        int extra_count = 0;
+        const int default_count = ARRAY_SIZE(default_longopts) - 1;
+        int arch_count;
 
         /* count additional opts */
-        dptr = arch_long_opts;
-        do {} while (dptr[extra_count++].name);
+        for (arch_count = 0; arch_long_opts[arch_count].name; arch_count++) {
+            continue;
+        }
 
-        lopts = calloc(default_count + extra_count, osize);
+        lopts = calloc(default_count + arch_count + 1, osize);
 
         /* Copy default opts + extra opts */
         memcpy(lopts, default_longopts, default_count * osize);
-        dptr = &lopts[default_count - 1];
-        memcpy(dptr, arch_long_opts, extra_count * osize);
+        memcpy(lopts + default_count, arch_long_opts, arch_count * osize);
     }
 
     return lopts;
@@ -340,34 +337,26 @@ int main(int argc, char **argv)
 
         switch (c) {
         case 0:
-        {
             /* flag set by getopt_long, do nothing */
             break;
-        }
         case 't':
-        {
             trace_fn = optarg;
             trace = 1;
             break;
-        }
         case 'h':
-        {
             hostname = optarg;
             break;
-        }
         case 'p':
-        {
             /* FIXME err handling */
             port = strtol(optarg, 0, 10);
             break;
-        }
         case '?':
-        {
             usage();
             exit(1);
-        }
         default:
-            abort();
+            assert(c >= FIRST_ARCH_OPT);
+            process_arch_opt(c, optarg);
+            break;
         }
     }
 
