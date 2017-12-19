@@ -17,6 +17,11 @@
 #error
 #endif
 
+/* The kernel headers set this based on future arch extensions.
+   The current arch maximum is 16.  Save space below.  */
+#undef SVE_VQ_MAX
+#define SVE_VQ_MAX 16
+
 struct reginfo {
     uint64_t fault_address;
     uint64_t regs[31];
