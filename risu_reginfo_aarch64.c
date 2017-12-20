@@ -35,7 +35,7 @@ const char * const arch_extra_help
 
 void process_arch_opt(int opt, const char *arg)
 {
-    long e;
+    long want, got;
 
     assert(opt == FIRST_ARCH_OPT);
     test_sve = strtol(arg, 0, 10);
@@ -44,9 +44,15 @@ void process_arch_opt(int opt, const char *arg)
         fprintf(stderr, "Invalid value for VQ (1-%d)\n", SVE_VQ_MAX);
         exit(1);
     }
-    e = prctl(PR_SVE_SET_VL, sve_vl_from_vq(test_sve));
-    if (e < 0) {
-        perror("Unsupported value for VQ");
+    want = sve_vl_from_vq(test_sve);
+    got = prctl(PR_SVE_SET_VL, want);
+    if (want != got) {
+        if (got < 0) {
+            perror("prctl PR_SVE_SET_VL");
+        } else {
+            fprintf(stderr, "Unsupported value for VQ (%ld != %ld)\n",
+                    want, got);
+        }
         exit(1);
     }
 }
