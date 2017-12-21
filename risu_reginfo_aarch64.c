@@ -173,7 +173,7 @@ static int sve_preg_is_eq(int vq, const void *p1, const void *p2)
 static void sve_dump_preg(FILE *f, int vq, const uint16_t *p)
 {
     int q;
-    for (q = 0; q < vq; q++) {
+    for (q = vq - 1; q >= 0; q--) {
         fprintf(f, "%04x", p[q]);
     }
 }
