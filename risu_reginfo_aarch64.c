@@ -50,8 +50,8 @@ void process_arch_opt(int opt, const char *arg)
         if (got < 0) {
             perror("prctl PR_SVE_SET_VL");
         } else {
-            fprintf(stderr, "Unsupported value for VQ (%ld != %ld)\n",
-                    want, got);
+            fprintf(stderr, "Unsupported value for VQ (%d != %d)\n",
+                    test_sve, (int)sve_vq_from_vl(got));
         }
         exit(1);
     }
