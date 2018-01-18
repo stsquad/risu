@@ -17,8 +17,6 @@
 #   (optional) export RISU=/path/to/risu
 #   ./run_risu.sh  ./testcases.aarch64/*.bin
 
-set -e
-
 passed=()
 failed=()
 missing=()
