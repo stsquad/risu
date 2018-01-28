@@ -181,3 +181,58 @@ int report_match_status(int trace)
     }
     return resp;
 }
+
+int recv_and_dump_register_info(read_fn read_fn, respond_fn resp_fn)
+{
+    int resp = 0, op;
+    trace_header_t header;
+
+    if (read_fn(&header, sizeof(header)) != 0) {
+        return -1;
+    }
+
+    /* send OK for the header */
+    resp_fn(0);
+
+    op = header.risu_op;
+    switch (op) {
+    case OP_COMPARE:
+    case OP_TESTEND:
+    default:
+        /* Do a simple register compare on (a) explicit request
+         * (b) end of test (c) a non-risuop UNDEF
+         */
+        if (read_fn(&apprentice_ri, sizeof(apprentice_ri))) {
+            packet_mismatch = 1;
+            resp = 2;
+        } else {
+            if (op == OP_COMPARE) {
+                printf("COMPARE\n");
+            } else if (op == OP_TESTEND) {
+                printf("TESTEND\n");
+                resp = 1;
+            } else {
+                printf("OTHER %d\n", op);
+            }
+            reginfo_dump(&apprentice_ri, stdout);
+        }
+        resp_fn(resp);
+        break;
+    case OP_SETMEMBLOCK:
+        printf("SETMEMBLOCK\n");
+        break;
+    case OP_GETMEMBLOCK:
+        printf("GETMEMBLOCK\n");
+        break;
+    case OP_COMPAREMEM:
+        printf("COMPAREMEM\n");
+        if (read_fn(apprentice_memblock, MEMBLOCKLEN)) {
+            packet_mismatch = 1;
+            resp = 2;
+        }
+        resp_fn(resp);
+        break;
+    }
+
+    return resp;
+}

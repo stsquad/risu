@@ -290,11 +290,12 @@ static struct option * setup_options(char **short_opts)
         {"host", required_argument, 0, 'h'},
         {"port", required_argument, 0, 'p'},
         {"trace", required_argument, 0, 't'},
+        {"dump", required_argument, 0, 'd'},
         {0, 0, 0, 0}
     };
     struct option *lopts = &default_longopts[0];
 
-    *short_opts = "h:p:t:";
+    *short_opts = "h:p:t:d:";
 
     if (arch_long_opts) {
         const size_t osize = sizeof(struct option);
@@ -325,6 +326,7 @@ int main(int argc, char **argv)
     char *trace_fn = NULL;
     struct option *longopts;
     char *shortopts;
+    int dump = 0;
 
     longopts = setup_options(&shortopts);
 
@@ -343,6 +345,10 @@ int main(int argc, char **argv)
             trace_fn = optarg;
             trace = 1;
             break;
+        case 'd':
+            trace_fn = optarg;
+            dump = 1;
+            break;
         case 'h':
             hostname = optarg;
             break;
@@ -358,6 +364,21 @@ int main(int argc, char **argv)
             process_arch_opt(c, optarg);
             break;
         }
+    }
+
+    if (dump) {
+        if (strcmp(trace_fn, "-") == 0) {
+            apprentice_fd = STDIN_FILENO;
+        } else {
+            apprentice_fd = open(trace_fn, O_RDONLY);
+#ifdef HAVE_ZLIB
+            gz_trace_file = gzdopen(apprentice_fd, "rb");
+#endif
+        }
+        do {
+          dump = recv_and_dump_register_info(read_trace, respond_trace);
+        } while (dump == 0);
+        exit(dump != 1);
     }
 
     imgfile = argv[optind];

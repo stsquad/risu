@@ -90,6 +90,10 @@ int send_register_info(write_fn write_fn, void *uc);
 int recv_and_compare_register_info(read_fn read_fn,
                                    respond_fn respond, void *uc);
 
+/* Read register into from the socket and dump it.
+ */
+int recv_and_dump_register_info(read_fn read_fn, respond_fn respond);
+
 /* Print a useful report on the status of the last comparison
  * done in recv_and_compare_register_info(). This is called on
  * exit, so need not restrict itself to signal-safe functions.
