@@ -2937,3 +2937,35 @@ FCVTZUsi_RES A64_V sf:1 0011110 1 type:1 1 11 001 000000 rn:5 rd:5
 # End of:
 # Data processing - SIMD and floating point
 # Data processing - Scalar Floating-Point and Advanced SIMD
+
+# These are optional ARMv8.2 cryptographic extensions
+@v8.2,Cryptographic,CryptographicSHA
+
+# Cryptographic three-register SHA 512
+# 31       21 20  16 15 14 13 12 11    10 9  5 4  0
+# 11001110011   Rm    1  O  0 0   opcode   Rn   Rd
+
+SHA512H   A64_V 1100 1110 011 rm:5 1 0 00 00 rn:5 rd:5
+SHA512H2  A64_V 1100 1110 011 rm:5 1 0 00 01 rn:5 rd:5
+SHA512SUI A64_V 1100 1110 011 rm:5 1 0 00 10 rn:5 rd:5
+RAX1      A64_V 1100 1110 011 rm:5 1 0 00 11 rn:5 rd:5
+SM3PARTW1 A64_V 1100 1110 011 rm:5 1 1 00 00 rn:5 rd:5
+SM3PARTW2 A64_V 1100 1110 011 rm:5 1 1 00 01 rn:5 rd:5
+SM4       A64_V 1100 1110 011 rm:5 1 1 00 10 rn:5 rd:5
+
+# Cryptographic four-register
+# 31       23 22 21 20  16 15 14  10 9  5 4  0
+# 1100 1110 0  Op0    Rm    0   Ra    Rn   Rd
+
+EOR3      A64_V 1110 1110 0 00 rm:5 0 ra:5 rn:5 rd:5
+BCAX      A64_V 1110 1110 0 01 rm:5 0 ra:5 rn:5 rd:5
+SM3SS1    A64_V 1110 1110 0 10 rm:5 0 ra:5 rn:5 rd:5
+
+# Cryptographic two-register SHA 512
+# 31                    12 11  10 9  5 4  0
+# 1100 1110 1100 0000 1000   op    Rn   Rd
+
+SHA512SU0 A64_V 1100 1110 1100 0000 1000 00 rn:5 rd:5
+SM4E      A64_V 1100 1110 1100 0000 1000 01 rn:5 rd:5
+
+@
