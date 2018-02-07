@@ -61,6 +61,8 @@ if test ${#failed[@]} -gt 0; then
     for f in "${failed[@]}"; do
         echo "$f"
     done
+else
+    echo "No Failures ;-)"
 fi
 
 exit ${#failed[@]}
