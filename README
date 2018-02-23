@@ -81,6 +81,10 @@ reads the configuration file arm.risu, and generates 10000 instructions
 based on the instruction patterns matching the regular expression
 "VQSHL.*imm.*". The resulting binary is written to vqshlimm.out.
 
+An alternative to using regular expression patterns is to use the
+--group specifier. This relies on the configuration file having been
+annotated with suitable @ markers.
+
 This binary can then be passed to the risu program, which is
 written in C. You need to run risu on both an ARM native target
 and on the program under test. The ARM native system is the 'master'
@@ -145,6 +149,12 @@ a line continuation character.
 Lines starting with a '.' are directives to risu/risugen:
  * ".mode [thumb|arm]" specifies whether the file contains ARM
    or Thumb instructions; it must precede all instruction patterns.
+
+Lines starting with a '@' are a grouping directive. Instructions
+following will be assigned to a comma separated list of groups. The
+list of groups is reset at the next '@' directive which may be empty.
+This provides an alternative method to selecting instructions than RE
+patterns.
 
 Other lines are instruction patterns:
  insnname encodingname bitfield ... [ [ !blockname ] { blocktext } ]
