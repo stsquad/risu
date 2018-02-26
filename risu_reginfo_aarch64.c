@@ -123,12 +123,17 @@ void reginfo_init(struct reginfo *ri, ucontext_t *uc)
                     sve->vl, sve_vl_from_vq(vq));
             return;
         }
+        ri->vl = sve->vl;
+
         if (sve->head.size < SVE_SIG_CONTEXT_SIZE(vq)) {
-            fprintf(stderr, "risu_reginfo_aarch64: "
-                    "failed to get complete SVE state\n");
+            if (sve->head.size == sizeof(*sve)) {
+                /* SVE state is empty -- not an error.  */
+            } else {
+                fprintf(stderr, "risu_reginfo_aarch64: "
+                        "failed to get complete SVE state\n");
+            }
             return;
         }
-        ri->vl = sve->vl;
 
         /* Copy ZREG's one at a time */
         for (i = 0; i < SVE_NUM_ZREGS; i++) {
