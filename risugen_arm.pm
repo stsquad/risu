@@ -765,6 +765,15 @@ sub write_get_offset()
     write_risuop($OP_GETMEMBLOCK);
 }
 
+# Return the log2 of the memory size of an operation described by dtype.
+sub dtype_msz($)
+{
+    my ($dtype) = @_;
+    my $dth = $dtype >> 2;
+    my $dtl = $dtype & 3;
+    return $dtl >= $dth ? $dth : 3 - $dth;
+}
+
 sub reg($@)
 {
     my ($base, @trashed) = @_;
