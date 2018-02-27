@@ -13,6 +13,7 @@
 #
 # Usage:
 #   (optional) export QEMU=/path/to/qemu
+#   (optional) export QEMU=/path/to/qemu -cpu type
 #   (optional) export RISU=/path/to/risu
 #   ./run_risu.sh  ./testcases.aarch64/*.bin
 
@@ -25,11 +26,16 @@ if test -z "$RISU"; then
     RISU=${script_dir}/risu
 fi
 
+if test -z "$QEMU"; then
+    echo "Running against system QEMU with no flags"
+fi
+
 for f in $@; do
     t="$f.trace"
-    echo "Running $f against $t"
+    CMD="${QEMU} ${RISU} $f -t $t"
+    echo "Running: ${CMD}"
     if [ -e $t ]; then
-        ${QEMU} ${RISU} $f -t $t
+        ${CMD}
         if [ $? == 0 ]; then
             passed=( "${passed[@]}" $f )
         else
