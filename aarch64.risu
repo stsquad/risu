@@ -2956,6 +2956,19 @@ SQRDMLSHse  A64_V81  01111111 size:2 l:1 m:1 rm:4 1111 h:1 0 rn:5 rd:5
 # SQRDMLSH (element, vector)
 SQRDMLSHve  A64_V81  0 q:1 101111 size:2 l:1 m:1 rm:4 1111 h:1 0 rn:5 rd:5
 
+#
+# AdvSIMD v8.3 extensions
+#
+@v8_3_compnum
+
+# FCADD (three registers of the same type)
+FCADD      A64_V83  0 q:1 101110 size:2 0 rm:5 111 rot:1 01 rn:5 rd:5
+
+# FCMLA (three registers of the same type)
+FCMLA      A64_V83  0 q:1 101110 size:2 0 rm:5 110 rot:2 1 rn:5 rd:5
+# FCMLA (vector x indexed element)
+FCMLA_idx  A64_V83  0 q:1 101111 size:2 l:1 m:1 rm:4 0 rot:2 1 h:1 0 rn:5 rd:5
+
 @
 # End of:
 # Data processing - SIMD and floating point
