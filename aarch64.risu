@@ -2932,6 +2932,30 @@ FCVTZUsi A64_V sf:1 0011110 type:2 1 11 001 000000 rn:5 rd:5 \
 # UnallocatedEncoding: type >= 2
 FCVTZUsi_RES A64_V sf:1 0011110 1 type:1 1 11 001 000000 rn:5 rd:5
 
+#
+# AdvSIMD v8.1 extensions
+#
+
+@v8_1_simd
+
+# SQRDMLAH (vector, scalar)
+SQRDMLAHvs  A64_V81  01111110 size:2 0 rm:5 100001 rn:5 rd:5
+# SQRDMLAH (vector, vector)
+SQRDMLAHv   A64_V81  0 q:1 101110 size:2 0 rm:5 100001 rn:5 rd:5
+# SQRDMLAH (element, scalar)
+SQRDMLAHse  A64_V81  01111111 size:2 l:1 m:1 rm:4 1101 h:1 0 rn:5 rd:5
+# SQRDMLAH (element, vector)
+SQRDMLAHve  A64_V81  0 q:1 101111 size:2 l:1 m:1 rm:4 1101 h:1 0 rn:5 rd:5
+
+# SQRDMLSH (vector, scalar)
+SQRDMLSHvs  A64_V81  01111110 size:2 0 rm:5 100011 rn:5 rd:5
+# SQRDMLSH (vector, vector)
+SQRDMLSHv   A64_V81  0 q:1 101110 size:2 0 rm:5 100011 rn:5 rd:5
+# SQRDMLSH (element, scalar)
+SQRDMLSHse  A64_V81  01111111 size:2 l:1 m:1 rm:4 1111 h:1 0 rn:5 rd:5
+# SQRDMLSH (element, vector)
+SQRDMLSHve  A64_V81  0 q:1 101111 size:2 l:1 m:1 rm:4 1111 h:1 0 rn:5 rd:5
+
 @
 # End of:
 # Data processing - SIMD and floating point
