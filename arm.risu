@@ -831,3 +831,28 @@ VCVT_rm_neon A1 1111 00111 d 11 size:2 11 vd:4 00 rm:2 op q m 0 vm:4
 # Note that sz == 0b11 is UNPREDICTABLE (either UNDEF, NOP or as if == 0b10)
 # as is cond != 1110 (either UNDEF, NOP, cond-exec or unconditional exec)
 CRC32 A1 1110 00010 sz:2 0 rn:4 rd:4 00 c 0 0100 rm:4 !constraints { $sz != 3; }
+
+#
+# ARMv8.1 extensions
+#
+@v8_1_simd
+
+VQRDMLAH    A1 111100110 d:1 size:2 vn:4 vd:4 1011 n:1 q:1 m:1 1 vm:4
+VQRDMLAH_s  A1 1111001 q:1 1 d:1 size:2 vn:4 vd:4 1110 n:1 1 m:1 0 vm:4
+
+VQRDMLSH    A1 111100110 d:1 size:2 vn:4 vd:4 1100 n:1 q:1 m:1 1 vm:4
+VQRDMLSH_s  A1 1111001 q:1 1 d:1 size:2 vn:4 vd:4 1111 n:1 1 m:1 0 vm:4
+
+#
+# ARMv8.3 extensions
+#
+@v8_3_compnum
+
+# Disable fp16 until qemu supports it.
+VCADD       A1 1111110 rot:1 1 d:1 0 s:1 vn:4 vd:4 1000 n:1 q:1 m:1 0 vm:4 \
+!constraints { $s != 0; }
+
+VCMLA       A1 1111110 rot:2 d:1 1 s:1 vn:4 vd:4 1000 n:1 q:1 m:1 0 vm:4 \
+!constraints { $s != 0; }
+VCMLA_s     A1 11111110 s:1 d:1 rot:2 vn:4 vd:4 1000 n:1 q:1 m:1 0 vm:4 \
+!constraints { $s != 0; }

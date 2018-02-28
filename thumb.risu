@@ -437,3 +437,28 @@ STR T2 11111 000 0100 rn:4 rt:4 000000 imm:2 rm:4 \
 
 # V8 only instructions
 CRC32 T1 111 1101 011 0 c rn:4 1111 rd:4 10 sz:2 rm:4 !constraints { $sz != 3; }
+
+#
+# ARMv8.1 extensions
+#
+@v8_1_simd
+
+VQRDMLAH    T1  111111110 d:1 size:2 vn:4 vd:4 1011 n:1 q:1 m:1 1 vm:4
+VQRDMLAH_s  T1  111 q:1 11111 d:1 size:2 vn:4 vd:4 1110 n:1 1 m:1 0 vm:4
+
+VQRDMLSH    T1  111111110 d:1 size:2 vn:4 vd:4 1100 n:1 q:1 m:1 1 vm:4
+VQRDMLSH_s  T1  111 q:1 11111 d:1 size:2 vn:4 vd:4 1111 n:1 1 m:1 0 vm:4
+
+#
+# ARMv8.3 extensions
+#
+@v8_3_compnum
+
+# Disable fp16 until qemu supports it.
+VCADD       T1  1111110 rot:1 1 d:1 0 s:1 vn:4 vd:4 1000 n:1 q:1 m:1 0 vm:4 \
+!constraints { $s != 0; }
+
+VCMLA       T1  1111110 rot:2 d:1 1 s:1 vn:4 vd:4 1000 n:1 q:1 m:1 0 vm:4 \
+!constraints { $s != 0; }
+VCMLA_s     T1  11111110 s:1 d:1 rot:2 vn:4 vd:4 1000 n:1 q:1 m:1 0 vm:4 \
+!constraints { $s != 0; }
