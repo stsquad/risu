@@ -1050,8 +1050,8 @@ LHZX PPC64LE 011111 rt:5 ra:5 rb:5 01000101110 \
 
 # format:DQ book:I page:59 v2.03 lq Load Qword
 LQ PPC64LE 111000 rtp:5 ra:5 imm:12 0000 \
-!constraints { $rtp % 2 == 0 && $ra != 1 && $ra != 13 && $ra != 0 && $ra != $rtp && $imm <= 2032; } \
-!memory { reg_plus_imm($ra, $imm << 4); }
+!constraints { $rtp % 2 == 0 && $rtp != 0 && $rtp != 12 && $ra != 1 && $ra != 13 && $ra != 0 && $ra != $rtp && $imm <= 2032; } \
+!memory { reg_plus_imm($ra, ($imm << 4) + 8); }
 
 # format:X book:I page:65 v:P1 lswi Load String Word Immediate
 LSWI PPC64LE 011111 rt:5 ra:5 rb:5 10010101010 \
