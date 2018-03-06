@@ -122,7 +122,7 @@ int reginfo_dump(struct reginfo *ri, FILE * f)
     fprintf(f, "\tdscr   : %16lx\n\n", ri->gregs[44]);
 
     for (i = 0; i < 16; i++) {
-        fprintf(f, "\tf%2d: %.4f\tr%2d: %.4f\n", i, ri->fpregs[i],
+        fprintf(f, "\tf%2d: %.4f\tf%2d: %.4f\n", i, ri->fpregs[i],
                 i + 16, ri->fpregs[i + 16]);
     }
     fprintf(f, "\tfpscr: %f\n\n", ri->fpregs[32]);
@@ -167,7 +167,7 @@ int reginfo_dump_mismatch(struct reginfo *m, struct reginfo *a, FILE *f)
         }
 
         if (m->fpregs[i] != a->fpregs[i]) {
-            fprintf(f, "Mismatch: Register r%d\n", i);
+            fprintf(f, "Mismatch: Register f%d\n", i);
             fprintf(f, "m: [%f] != a: [%f]\n", m->fpregs[i], a->fpregs[i]);
         }
     }
