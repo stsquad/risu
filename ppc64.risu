@@ -887,6 +887,31 @@ FTSQRT PPC64LE 111111 bf:3 0000000 frb:5 00101000000
 ISEL PPC64LE 011111 rt:5 ra:5 rb:5 bc:5 011110 \
 !constraints { $rt != 1 && $ra != 1 && $rb != 1 && $rt != 13 && $ra != 13 && $rb != 13; }
 
+# format:D book:I page:48 v:P1 lbz Load Byte & Zero
+LBZ PPC64LE 100010 rt:5 ra:5 imm:16 \
+!constraints { $rt != 1 && $ra != 1 && $rt != 13 && $ra != 13 && $ra != 0 && $ra != $rt && $imm <= 32752; } \
+!memory { reg_plus_imm($ra, $imm); }
+
+# format:D book:I page:48 v:P1 lbzu Load Byte & Zero with Update
+LBZU PPC64LE 100011 rt:5 ra:5 imm:16 \
+!constraints { $rt != 1 && $ra != 1 && $rt != 13 && $ra != 13 && $ra != 0 && $ra != $rt && $imm <= 32752; } \
+!memory { reg_plus_imm($ra, $imm); }
+
+# format:X book:I page:49 v:P1 lbzux Load Byte & Zero with Update Indexed
+LBZUX PPC64LE 011111 rt:5 ra:5 rb:5 00011101110 \
+!constraints { $rt != 1 && $ra != 1 && $rb != 1 && $rt != 13 && $ra != 13 && $rb != 13 && $ra != 0 && $ra != $rt && $ra != $rb && $rt != $rb; } \
+!memory { reg_plus_reg($ra, $rb); }
+
+# format:X book:I page:49 v:P1 lbzx Load Byte & Zero Indexed
+LBZX PPC64LE 011111 rt:5 ra:5 rb:5 00010101110 \
+!constraints { $rt != 1 && $ra != 1 && $rb != 1 && $rt != 13 && $ra != 13 && $rb != 13 && $ra != 0 && $ra != $rt && $ra != $rb && $rt != $rb; } \
+!memory { reg_plus_reg($ra, $rb); }
+
+# format:DS book:I page:53 PPC ld Load Dword
+LD PPC64LE 111010 rt:5 ra:5 imm:14 00 \
+!constraints { $rt != 1 && $ra != 1 && $rt != 13 && $ra != 13 && $ra != 0 && $ra != $rt && $imm <= 8176; } \
+!memory { reg_plus_imm($ra, $imm << 2); }
+
 # format:X book:I page:62 v2.06 ldbrx Load Dword Byte-Reverse Indexed
 LDBRX PPC64LE 011111 rt:5 ra:5 rb:5 10000101000 \
 !constraints { $rt != 1 && $ra != 1 && $rb != 1 && $rt != 13 && $ra != 13 && $rb != 13 && $ra != 0 && $ra != $rt && $ra != $rb && $rt != $rb; } \
