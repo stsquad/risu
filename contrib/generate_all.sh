@@ -12,11 +12,11 @@
 #     Alex Bennée <alex.bennee@linaro.org> - initial implementation
 #
 # Usage:
-#   ./contrib/generate_all.sh <arch.risu> <target directory>
+#   ./contrib/generate_all.sh <arch.risu> <target directory> -- risugen args
 
 set -e
 
-USAGE="Usage: `basename $0` [-h] [-n x] <risufile> <target dir>"
+USAGE="Usage: `basename $0` [-h] [-n x] <risufile> <target dir> -- [risugen args]"
 SPLIT=4
 RISUGEN=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd -P)/risugen
 
@@ -41,18 +41,24 @@ done
 # Remove the switches we parsed above.
 shift `expr $OPTIND - 1`
 
-while [ $# -ne 0 ]; do
+# Parse up to and including any --
+RISUGEN_ARGS=""
+while [ $# -ne 0 ] && [ -z "$RISUGEN_ARGS" ]; do
 
     if [ -f $1 ]; then
         RISU_FILE=$1;
     elif [ -d $1 ]; then
         TARGET_DIR=$1;
+    elif [ "$1" = "--" ]; then
+        RISUGEN_ARGS=$1
     elif [ ! -e $1 ]; then
         TARGET_DIR=$1
     fi
 
     shift
 done
+# anything left is for RISUGEN
+RISUGEN_ARGS=$@
 
 if test -z "${RISUGEN}" || test ! -x "${RISUGEN}";  then
     echo "Couldn't find risugen (${RISUGEN})"
@@ -90,7 +96,7 @@ while test $# -gt 0 ; do
         fi
     done
     I_FILE="${I_FILE}_INC.risu.bin"
-    CMD="${RISUGEN} ${INSN_PATTERNS} ${RISU_FILE} ${I_FILE}"
+    CMD="${RISUGEN} ${RISUGEN_ARGS} ${INSN_PATTERNS} ${RISU_FILE} ${I_FILE}"
     echo "Running: $CMD"
     $CMD
 done
