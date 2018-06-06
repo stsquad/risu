@@ -36,6 +36,11 @@ void process_arch_opt(int opt, const char *arg)
     abort();
 }
 
+const int reginfo_size(void)
+{
+    return sizeof(struct reginfo);
+}
+
 static void reginfo_init_vfp(struct reginfo *ri, ucontext_t *uc)
 {
     /* Read VFP registers. These live in uc->uc_regspace, which is

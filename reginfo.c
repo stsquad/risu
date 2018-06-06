@@ -39,7 +39,7 @@ int send_register_info(write_fn write_fn, void *uc)
 
     switch (op) {
     case OP_TESTEND:
-        write_fn(&ri, sizeof(ri));
+        write_fn(&ri, reginfo_size());
         /* if we are tracing write_fn will return 0 unlike a remote
            end, hence we force return of 1 here */
         return 1;
@@ -58,7 +58,7 @@ int send_register_info(write_fn write_fn, void *uc)
         /* Do a simple register compare on (a) explicit request
          * (b) end of test (c) a non-risuop UNDEF
          */
-        return write_fn(&ri, sizeof(ri));
+        return write_fn(&ri, reginfo_size());
     }
     return 0;
 }
@@ -101,7 +101,7 @@ int recv_and_compare_register_info(read_fn read_fn,
         /* Do a simple register compare on (a) explicit request
          * (b) end of test (c) a non-risuop UNDEF
          */
-        if (read_fn(&apprentice_ri, sizeof(apprentice_ri))) {
+        if (read_fn(&apprentice_ri, reginfo_size())) {
             packet_mismatch = 1;
             resp = 2;
         } else if (!reginfo_is_eq(&master_ri, &apprentice_ri)) {
