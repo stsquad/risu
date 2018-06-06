@@ -13,6 +13,10 @@
 #ifndef RISU_REGINFO_AARCH64_H
 #define RISU_REGINFO_AARCH64_H
 
+struct simd_reginfo {
+    __uint128_t vregs[32];
+};
+
 struct reginfo {
     uint64_t fault_address;
     uint64_t regs[31];
@@ -24,7 +28,10 @@ struct reginfo {
     /* FP/SIMD */
     uint32_t fpsr;
     uint32_t fpcr;
-    __uint128_t vregs[32];
+
+    union {
+        struct simd_reginfo simd;
+    };
 };
 
 #endif /* RISU_REGINFO_AARCH64_H */
