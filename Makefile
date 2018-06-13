@@ -51,3 +51,6 @@ $(PROG): $(OBJS)
 
 clean:
 	rm -f $(PROG) $(OBJS) $(BINS)
+
+distclean: clean
+	rm -f config.h Makefile.in

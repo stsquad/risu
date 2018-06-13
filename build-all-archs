@@ -54,6 +54,16 @@ while [[ "$1" = -* ]]; do
     esac
 done
 
+#
+# If you are developing your primary architecture directly out of the
+# source tree you can confuse any out-of-tree builds thanks to random
+# crap in your VPATH. Let's detect that and save some hair pulling.
+#
+if [ -e Makefile.in ]; then
+    echo "Cleaning in-src-tree build"
+    make distclean
+fi
+
 # Debian stretch and Ubuntu Xenial have cross compiler packages for
 # all of these:
 #   gcc-arm-linux-gnueabihf gcc-aarch64-linux-gnu gcc-m68k-linux-gnu
