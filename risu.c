@@ -39,6 +39,9 @@ size_t signal_count;
 #ifdef HAVE_ZLIB
 #include <zlib.h>
 gzFile gz_trace_file;
+#define TRACE_TYPE "compressed"
+#else
+#define TRACE_TYPE "uncompressed"
 #endif
 
 sigjmp_buf jmpbuf;
@@ -273,7 +276,7 @@ void usage(void)
     fprintf(stderr, "between master and apprentice risu processes.\n\n");
     fprintf(stderr, "Options:\n");
     fprintf(stderr, "  --master          Be the master (server)\n");
-    fprintf(stderr, "  -t, --trace=FILE  Record/playback trace file\n");
+    fprintf(stderr, "  -t, --trace=FILE  Record/playback " TRACE_TYPE " trace file\n");
     fprintf(stderr,
             "  -h, --host=HOST   Specify master host machine (apprentice only)"
             "\n");
