@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <ucontext.h>
 #include <string.h>
+#include <signal.h> /* for FPSIMD_MAGIC */
 
 #include "risu.h"
 #include "risu_reginfo_aarch64.h"
