@@ -174,6 +174,24 @@ sub write_sxt32($$)
     insn32(0x93407c00 | $rn << 5 | $rd);
 }
 
+sub write_add_rri($$$)
+{
+    my ($rd, $rn, $i) = @_;
+    my $sh;
+
+    die "write_add_rri: invalid operation for this arch.\n" if (!$is_aarch64);
+
+    if ($i >= 0 && $i < 0x1000) {
+        $sh = 0;
+    } elsif (($i & 0xfff) || $i >= 0x1000000) {
+        die "invalid immediate for this arch,\n";
+    } else {
+        $sh = 1;
+        $i >>= 12;
+    }
+    insn32(0x91000000 | ($rd << 0) | ($rn << 5) | ($i << 10) | ($sh << 22));
+}
+
 sub write_sub_rrr($$$)
 {
     my ($rd, $rn, $rm) = @_;
@@ -477,32 +495,34 @@ sub write_random_aarch64_svedata()
     # Load SVE registers
     my $align = 16;
     my $vq = 16;                             # quadwords per vector
-    my $datalen = (32 * $vq * 16) + $align;
+    my $veclen = 32 * $vq * 16;
+    my $predlen = 16 * $vq * 2;
+    my $datalen = $veclen + $predlen;
 
-    write_pc_adr(0, (3 * 4) + ($align - 1)); # insn 1
-    write_align_reg(0, $align);              # insn 2
-    write_jump_fwd($datalen);                # insn 3
-
-    # align safety
-    for (my $i = 0; $i < ($align / 4); $i++) {
-        # align with nops
-        insn32(0xd503201f);
-    };
+    write_pc_adr(0, 2 * 4);     # insn 1
+    write_jump_fwd($datalen);   # insn 2
 
     for (my $rt = 0; $rt <= 31; $rt++) {
         for (my $q = 0; $q < $vq; $q++) {
             write_random_fpreg_var(4); # quad
         }
     }
-
-    # Reset all the predicate registers to all true
-    for (my $p = 0; $p < 16; $p++) {
-        insn32(0x2518e3e0 | $p);
+    for (my $rt = 0; $rt <= 15; $rt++) {
+        for (my $q = 0; $q < $vq; $q++) {
+            insn16(rand(0xffff));
+        }
     }
 
     for (my $rt = 0; $rt <= 31; $rt++) {
         # ldr z$rt, [x0, #$rt, mul vl]
         insn32(0x85804000 + $rt + (($rt & 7) << 10) + (($rt & 0x18) << 13));
+    }
+
+    write_add_rri(0, 0, $veclen);
+
+    for (my $rt = 0; $rt <= 15; $rt++) {
+        # ldr p$rt, [x0, #$pt, mul vl]
+        insn32(0x85800000 + $rt + (($rt & 7) << 10) + (($rt & 0x18) << 13));
     }
 }
 
