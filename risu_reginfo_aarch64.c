@@ -18,6 +18,8 @@
 #include <stddef.h>
 #include <stdbool.h>
 #include <inttypes.h>
+#include <assert.h>
+#include <sys/prctl.h>
 
 #include "risu.h"
 #include "risu_reginfo_aarch64.h"
@@ -30,17 +32,41 @@ const char * const arch_extra_help;
 /* Should we test SVE register state */
 static int test_sve;
 static const struct option extra_opts[] = {
-    {"test-sve", no_argument, &test_sve, 1},
+    {"test-sve", required_argument, NULL, FIRST_ARCH_OPT },
     {0, 0, 0, 0}
 };
 
 const struct option * const arch_long_opts = &extra_opts[0];
-const char * const arch_extra_help = "  --test-sve        Compare SVE registers\n";
+const char * const arch_extra_help
+    = "  --test-sve=<vq>        Compare SVE registers with VQ\n";
 #endif
 
 void process_arch_opt(int opt, const char *arg)
 {
+#ifdef SVE_MAGIC
+    long want, got;
+
+    assert(opt == FIRST_ARCH_OPT);
+    test_sve = strtol(arg, 0, 10);
+
+    if (test_sve <= 0 || test_sve > SVE_VQ_MAX) {
+        fprintf(stderr, "Invalid value for VQ (1-%d)\n", SVE_VQ_MAX);
+        exit(1);
+    }
+    want = sve_vl_from_vq(test_sve);
+    got = prctl(PR_SVE_SET_VL, want);
+    if (want != got) {
+        if (got < 0) {
+            perror("prctl PR_SVE_SET_VL");
+        } else {
+            fprintf(stderr, "Unsupported value for VQ (%d != %d)\n",
+                    test_sve, (int)sve_vq_from_vl(got));
+        }
+        exit(1);
+    }
+#else
     abort();
+#endif
 }
 
 const int reginfo_size(void)
@@ -113,10 +139,16 @@ void reginfo_init(struct reginfo *ri, ucontext_t *uc)
 
 #ifdef SVE_MAGIC
     if (test_sve) {
-        int vq = sve_vq_from_vl(sve->vl); /* number of quads for whole vl */
+        int vq = test_sve;
 
         if (sve == NULL) {
             fprintf(stderr, "risu_reginfo_aarch64: failed to get SVE state\n");
+            return;
+        }
+        if (sve->vl != sve_vl_from_vq(vq)) {
+            fprintf(stderr, "risu_reginfo_aarch64: "
+                    "unexpected SVE state: %d != %d\n",
+                    sve->vl, sve_vl_from_vq(vq));
             return;
         }
 
