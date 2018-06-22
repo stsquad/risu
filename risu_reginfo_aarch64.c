@@ -15,6 +15,8 @@
 #include <string.h>
 #include <signal.h> /* for FPSIMD_MAGIC */
 #include <stdlib.h>
+#include <stddef.h>
+#include <assert.h>
 
 #include "risu.h"
 #include "risu_reginfo_aarch64.h"
@@ -25,6 +27,13 @@ const char * const arch_extra_help;
 void process_arch_opt(int opt, const char *arg)
 {
     abort();
+}
+
+const int reginfo_size(void)
+{
+    const int size = offsetof(struct reginfo, simd.end);
+    assert(sizeof(struct reginfo)==size);
+    return size;
 }
 
 /* reginfo_init: initialize with a ucontext */
@@ -71,7 +80,7 @@ void reginfo_init(struct reginfo *ri, ucontext_t *uc)
 /* reginfo_is_eq: compare the reginfo structs, returns nonzero if equal */
 int reginfo_is_eq(struct reginfo *r1, struct reginfo *r2)
 {
-    return memcmp(r1, r2, sizeof(*r1)) == 0;
+    return memcmp(r1, r2, reginfo_size()) == 0;
 }
 
 /* reginfo_dump: print state to a stream, returns nonzero on success */

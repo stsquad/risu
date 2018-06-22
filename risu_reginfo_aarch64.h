@@ -15,6 +15,7 @@
 
 struct simd_reginfo {
     __uint128_t vregs[32];
+    char end[0];
 };
 
 struct reginfo {

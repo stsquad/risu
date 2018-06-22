@@ -133,4 +133,7 @@ int reginfo_dump(struct reginfo *ri, FILE * f);
 /* reginfo_dump_mismatch: print mismatch details to a stream, ret nonzero=ok */
 int reginfo_dump_mismatch(struct reginfo *m, struct reginfo *a, FILE *f);
 
+/* return size of reginfo */
+const int reginfo_size(void);
+
 #endif /* RISU_H */
