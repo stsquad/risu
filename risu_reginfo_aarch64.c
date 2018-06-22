@@ -64,7 +64,7 @@ void reginfo_init(struct reginfo *ri, ucontext_t *uc)
     ri->fpcr = fp->fpcr;
 
     for (i = 0; i < 32; i++) {
-        ri->vregs[i] = fp->vregs[i];
+        ri->simd.vregs[i] = fp->vregs[i];
     }
 }
 
@@ -92,8 +92,8 @@ int reginfo_dump(struct reginfo *ri, FILE * f)
 
     for (i = 0; i < 32; i++) {
         fprintf(f, "  V%2d   : %016" PRIx64 "%016" PRIx64 "\n", i,
-                (uint64_t) (ri->vregs[i] >> 64),
-                (uint64_t) (ri->vregs[i] & 0xffffffffffffffff));
+                (uint64_t) (ri->simd.vregs[i] >> 64),
+                (uint64_t) (ri->simd.vregs[i] & 0xffffffffffffffff));
     }
 
     return !ferror(f);
@@ -138,14 +138,14 @@ int reginfo_dump_mismatch(struct reginfo *m, struct reginfo *a, FILE * f)
     }
 
     for (i = 0; i < 32; i++) {
-        if (m->vregs[i] != a->vregs[i]) {
+        if (m->simd.vregs[i] != a->simd.vregs[i]) {
             fprintf(f, "  V%2d   : "
                     "%016" PRIx64 "%016" PRIx64 " vs "
                     "%016" PRIx64 "%016" PRIx64 "\n", i,
-                    (uint64_t) (m->vregs[i] >> 64),
-                    (uint64_t) (m->vregs[i] & 0xffffffffffffffff),
-                    (uint64_t) (a->vregs[i] >> 64),
-                    (uint64_t) (a->vregs[i] & 0xffffffffffffffff));
+                    (uint64_t) (m->simd.vregs[i] >> 64),
+                    (uint64_t) (m->simd.vregs[i] & 0xffffffffffffffff),
+                    (uint64_t) (a->simd.vregs[i] >> 64),
+                    (uint64_t) (a->simd.vregs[i] & 0xffffffffffffffff));
         }
     }
 
