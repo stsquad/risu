@@ -16,13 +16,26 @@
 #include <signal.h> /* for FPSIMD_MAGIC */
 #include <stdlib.h>
 #include <stddef.h>
-#include <assert.h>
+#include <stdbool.h>
 
 #include "risu.h"
 #include "risu_reginfo_aarch64.h"
 
+#ifndef SVE_MAGIC
 const struct option * const arch_long_opts;
 const char * const arch_extra_help;
+#else
+
+/* Should we test SVE register state */
+static int test_sve;
+static const struct option extra_opts[] = {
+    {"test-sve", no_argument, &test_sve, 1},
+    {0, 0, 0, 0}
+};
+
+const struct option * const arch_long_opts = &extra_opts[0];
+const char * const arch_extra_help = "  --test-sve        Compare SVE registers\n";
+#endif
 
 void process_arch_opt(int opt, const char *arg)
 {
@@ -31,8 +44,12 @@ void process_arch_opt(int opt, const char *arg)
 
 const int reginfo_size(void)
 {
-    const int size = offsetof(struct reginfo, simd.end);
-    assert(sizeof(struct reginfo)==size);
+    int size = offsetof(struct reginfo, simd.end);
+#ifdef SVE_MAGIC
+    if (test_sve) {
+        size = offsetof(struct reginfo, sve.end);
+    }
+#endif
     return size;
 }
 
@@ -40,8 +57,12 @@ const int reginfo_size(void)
 void reginfo_init(struct reginfo *ri, ucontext_t *uc)
 {
     int i;
-    struct _aarch64_ctx *ctx;
-    struct fpsimd_context *fp;
+    struct _aarch64_ctx *ctx, *extra = NULL;
+    struct fpsimd_context *fp = NULL;
+#ifdef SVE_MAGIC
+    struct sve_context *sve = NULL;
+#endif
+
     /* necessary to be able to compare with memcmp later */
     memset(ri, 0, sizeof(*ri));
 
@@ -57,20 +78,80 @@ void reginfo_init(struct reginfo *ri, ucontext_t *uc)
     ri->faulting_insn = *((uint32_t *) uc->uc_mcontext.pc);
 
     ctx = (struct _aarch64_ctx *) &uc->uc_mcontext.__reserved[0];
-
-    while (ctx->magic != FPSIMD_MAGIC && ctx->size != 0) {
-        ctx += (ctx->size + sizeof(*ctx) - 1) / sizeof(*ctx);
+    while (ctx) {
+        switch (ctx->magic) {
+        case FPSIMD_MAGIC:
+            fp = (void *)ctx;
+            break;
+#ifdef SVE_MAGIC
+        case SVE_MAGIC:
+            sve = (void *)ctx;
+            break;
+        case EXTRA_MAGIC:
+            extra = (void *)((struct extra_context *)(ctx))->datap;
+            break;
+#endif
+        case 0:
+            /* End of list.  */
+            ctx = extra;
+            extra = NULL;
+            continue;
+        default:
+            /* Unknown record -- skip it.  */
+            break;
+        }
+        ctx = (void *)ctx + ctx->size;
     }
 
-    if (ctx->magic != FPSIMD_MAGIC || ctx->size != sizeof(*fp)) {
-        fprintf(stderr,
-                "risu_reginfo_aarch64: failed to get FP/SIMD state\n");
+    if (!fp || fp->head.size != sizeof(*fp)) {
+        fprintf(stderr, "risu_reginfo_aarch64: failed to get FP/SIMD state\n");
         return;
     }
-
-    fp = (struct fpsimd_context *) ctx;
     ri->fpsr = fp->fpsr;
     ri->fpcr = fp->fpcr;
+
+#ifdef SVE_MAGIC
+    if (test_sve) {
+        int vq = sve_vq_from_vl(sve->vl); /* number of quads for whole vl */
+
+        if (sve == NULL) {
+            fprintf(stderr, "risu_reginfo_aarch64: failed to get SVE state\n");
+            return;
+        }
+
+        ri->sve.vl = sve->vl;
+
+        if (sve->head.size < SVE_SIG_CONTEXT_SIZE(vq)) {
+            if (sve->head.size == sizeof(*sve)) {
+                /* SVE state is empty -- not an error.  */
+            } else {
+                fprintf(stderr, "risu_reginfo_aarch64: "
+                        "failed to get complete SVE state\n");
+            }
+            return;
+        }
+
+        /* Copy ZREG's one at a time */
+        for (i = 0; i < SVE_NUM_ZREGS; i++) {
+            memcpy(&ri->sve.zregs[i],
+                   (void *)sve + SVE_SIG_ZREG_OFFSET(vq, i),
+                   SVE_SIG_ZREG_SIZE(vq));
+        }
+
+        /* Copy PREG's one at a time */
+        for (i = 0; i < SVE_NUM_PREGS; i++) {
+            memcpy(&ri->sve.pregs[i],
+                   (void *)sve + SVE_SIG_PREG_OFFSET(vq, i),
+                   SVE_SIG_PREG_SIZE(vq));
+        }
+
+        /* Finally the FFR */
+        memcpy(&ri->sve.ffr,(void *)sve + SVE_SIG_FFR_OFFSET(vq),
+               SVE_SIG_FFR_SIZE(vq));
+
+        return;
+    }
+#endif
 
     for (i = 0; i < 32; i++) {
         ri->simd.vregs[i] = fp->vregs[i];

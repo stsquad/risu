@@ -13,10 +13,23 @@
 #ifndef RISU_REGINFO_AARCH64_H
 #define RISU_REGINFO_AARCH64_H
 
+#include <signal.h> /* for SVE_MAGIC */
+
 struct simd_reginfo {
     __uint128_t vregs[32];
     char end[0];
 };
+
+#ifdef SVE_MAGIC
+struct sve_reginfo {
+    /* SVE */
+    uint16_t    vl; /* current VL */
+    __uint128_t zregs[SVE_NUM_ZREGS][SVE_VQ_MAX];
+    uint16_t    pregs[SVE_NUM_PREGS][SVE_VQ_MAX];
+    uint16_t    ffr[SVE_VQ_MAX];
+    char end[0];
+};
+#endif
 
 struct reginfo {
     uint64_t fault_address;
@@ -32,6 +45,9 @@ struct reginfo {
 
     union {
         struct simd_reginfo simd;
+#ifdef SVE_MAGIC
+        struct sve_reginfo sve;
+#endif
     };
 };
 
