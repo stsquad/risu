@@ -277,7 +277,7 @@ DADDQd PPC64LE 111111 frtp:5 frap:5 frbp:5 00000000101
 
 # format:X book:I page:79 v3.0 darn Deliver A Random Number
 DARN PPC64LE 011111 rt:5 000 l:2 0000010111100110 \
-!constraints { $rt != 1 && $rt != 13; }
+!constraints { $rt != 1 && $rt != 13 && $l != 3; }
 
 # format:X book:I page:217 v2.06 dcffix DFP Convert From Fixed
 DCFFIX PPC64LE 111011 frt:5 00000 frb:5 11001000100
