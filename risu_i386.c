@@ -25,12 +25,41 @@ static int insn_is_ud2(uint32_t insn)
 
 void advance_pc(void *vuc)
 {
+    ucontext_t *uc = (ucontext_t *) vuc;
+
     /* We assume that this is either UD1 or UD2.
      * This would need tweaking if we want to test
      * expected undefs on x86.
      */
-    ucontext_t *uc = vuc;
     uc->uc_mcontext.gregs[REG_EIP] += 2;
+}
+
+void set_ucontext_paramreg(void *vuc, uint64_t value)
+{
+    ucontext_t *uc = (ucontext_t *) vuc;
+    uc->uc_mcontext.gregs[REG_EAX] = (uint32_t) value;
+}
+
+uint64_t get_reginfo_paramreg(struct reginfo *ri)
+{
+    return ri->gregs[REG_EAX];
+}
+
+int get_risuop(struct reginfo *ri)
+{
+    switch (ri->faulting_insn & 0xffff) {
+    case 0xb90f:                /* UD1 */
+        return OP_COMPARE;
+    case 0x0b0f:                /* UD2 */
+        return OP_TESTEND;
+    default:                    /* unexpected */
+        return -1;
+    }
+}
+
+uintptr_t get_pc(struct reginfo *ri)
+{
+    return ri->gregs[REG_EIP];
 }
 
 int send_register_info(int sock, void *uc)

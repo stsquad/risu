@@ -28,6 +28,7 @@ struct reginfo {
 #   define REG_ES      2
 #   define REG_DS      3
 #   define REG_ESP     7
+#   define REG_EAX    11
 #   define REG_TRAPNO 12
 #   define REG_EIP    14
 #   define REG_EFL    16
