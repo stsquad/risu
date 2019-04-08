@@ -10,12 +10,28 @@
  ******************************************************************************/
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <ucontext.h>
 
 #include "risu.h"
 #include "risu_reginfo_i386.h"
 
-static void fill_reginfo(struct reginfo *ri, ucontext_t * uc)
+const struct option * const arch_long_opts;
+const char * const arch_extra_help;
+
+void process_arch_opt(int opt, const char *arg)
+{
+    abort();
+}
+
+const int reginfo_size(void)
+{
+    return sizeof(struct reginfo);
+}
+
+/* reginfo_init: initialize with a ucontext */
+void reginfo_init(struct reginfo *ri, ucontext_t *uc)
 {
     int i;
     for (i = 0; i < NGREG; i++) {
@@ -51,18 +67,38 @@ static void fill_reginfo(struct reginfo *ri, ucontext_t * uc)
     ri->faulting_insn = *((uint32_t *) uc->uc_mcontext.gregs[REG_EIP]);
 }
 
-static char *regname[] = {
+/* reginfo_is_eq: compare the reginfo structs, returns nonzero if equal */
+int reginfo_is_eq(struct reginfo *m, struct reginfo *a)
+{
+    return 0 == memcmp(m, a, sizeof(*m));
+}
+
+static const char *const regname[NGREG] = {
     "GS", "FS", "ES", "DS", "EDI", "ESI", "EBP", "ESP",
     "EBX", "EDX", "ECX", "EAX", "TRAPNO", "ERR", "EIP",
-    "CS", "EFL", "UESP", "SS", 0
+    "CS", "EFL", "UESP", "SS"
 };
 
-static void dump_reginfo(struct reginfo *ri)
+/* reginfo_dump: print state to a stream, returns nonzero on success */
+int reginfo_dump(struct reginfo *ri, FILE *f)
 {
     int i;
-    fprintf(stderr, "  faulting insn %x\n", ri->faulting_insn);
+    fprintf(f, "  faulting insn %x\n", ri->faulting_insn);
     for (i = 0; i < NGREG; i++) {
-        fprintf(stderr, "  %s: %x\n", regname[i] ? regname[i] : "???",
+        fprintf(f, "  %s: %x\n", regname[i] ? regname[i] : "???",
                 ri->gregs[i]);
     }
+    return !ferror(f);
+}
+
+int reginfo_dump_mismatch(struct reginfo *m, struct reginfo *a, FILE *f)
+{
+    int i;
+    for (i = 0; i < NGREG; i++) {
+        if (m->gregs[i] != a->gregs[i]) {
+            fprintf(f, "Mismatch: Register %s\n", regname[i] ? regname[i] : "???");
+            fprintf(f, "m: [%x] != a: [%x]\n", m->gregs[i], a->gregs[i]);
+        }
+    }
+    return !ferror(f);
 }
