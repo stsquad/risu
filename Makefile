@@ -17,7 +17,7 @@ VPATH=$(SRCDIR)
 
 CFLAGS ?= -g
 
-ALL_CFLAGS = -Wall -D_GNU_SOURCE -DARCH=$(ARCH) $(BUILD_INC) $(CFLAGS) $(EXTRA_CFLAGS)
+ALL_CFLAGS = -Wall -D_GNU_SOURCE -DARCH=$(ARCH) -U$(ARCH) $(BUILD_INC) $(CFLAGS) $(EXTRA_CFLAGS)
 
 PROG=risu
 SRCS=risu.c comms.c reginfo.c risu_$(ARCH).c risu_reginfo_$(ARCH).c
@@ -48,6 +48,9 @@ $(PROG): $(OBJS)
 
 %_$(ARCH).elf: %_$(ARCH).s
 	$(AS) -o $@ $<
+
+%_$(ARCH).elf: %_$(ARCH).S
+	$(CC) $(CPPFLAGS) -o $@ -c $<
 
 clean:
 	rm -f $(PROG) $(OBJS) $(BINS)

@@ -20,37 +20,33 @@ void advance_pc(void *vuc)
 {
     ucontext_t *uc = (ucontext_t *) vuc;
 
-    /* We assume that this is either UD1 or UD2.
-     * This would need tweaking if we want to test
-     * expected undefs on x86.
+    /*
+     * We assume that this is UD1 as per get_risuop below.
+     * This would need tweaking if we want to test expected undefs.
      */
-    uc->uc_mcontext.gregs[REG_EIP] += 2;
+    uc->uc_mcontext.gregs[REG_E(IP)] += 3;
 }
 
 void set_ucontext_paramreg(void *vuc, uint64_t value)
 {
     ucontext_t *uc = (ucontext_t *) vuc;
-    uc->uc_mcontext.gregs[REG_EAX] = (uint32_t) value;
+    uc->uc_mcontext.gregs[REG_E(AX)] = value;
 }
 
 uint64_t get_reginfo_paramreg(struct reginfo *ri)
 {
-    return ri->gregs[REG_EAX];
+    return ri->gregs[REG_E(AX)];
 }
 
 int get_risuop(struct reginfo *ri)
 {
-    switch (ri->faulting_insn & 0xffff) {
-    case 0xb90f:                /* UD1 */
-        return OP_COMPARE;
-    case 0x0b0f:                /* UD2 */
-        return OP_TESTEND;
-    default:                    /* unexpected */
-        return -1;
+    if ((ri->faulting_insn & 0xf8ffff) == 0xc0b90f) { /* UD1 %xxx,%eax */
+        return (ri->faulting_insn >> 16) & 7;
     }
+    return -1;
 }
 
 uintptr_t get_pc(struct reginfo *ri)
 {
-    return ri->gregs[REG_EIP];
+    return ri->gregs[REG_E(IP)];
 }

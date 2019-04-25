@@ -48,12 +48,14 @@ EOF
 }
 
 guess_arch() {
-    if check_define __m68k__ ; then
-        ARCH="m68k"
+    if check_define __aarch64__ ; then
+        ARCH="aarch64"
     elif check_define __arm__ ; then
         ARCH="arm"
-    elif check_define __aarch64__ ; then
-        ARCH="aarch64"
+    elif check_define __i386__ || check_define __x86_64__ ; then
+        ARCH="i386"
+    elif check_define __m68k__ ; then
+        ARCH="m68k"
     elif check_define __powerpc64__ ; then
         ARCH="ppc64"
     else
