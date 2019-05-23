@@ -53,8 +53,25 @@ const char * const arch_extra_help
 
 void process_arch_opt(int opt, const char *arg)
 {
+    char *endptr;
+
     assert(opt == FIRST_ARCH_OPT);
-    xfeatures = strtoull(arg, 0, 0);
+
+    if (!strcmp(arg, "sse")) {
+        xfeatures = XFEAT_X87 | XFEAT_SSE;
+    } else if (!strcmp(arg, "avx")) {
+        xfeatures = XFEAT_X87 | XFEAT_SSE | XFEAT_AVX;
+    } else if (!strcmp(arg, "avx512")) {
+        xfeatures = XFEAT_X87 | XFEAT_SSE | XFEAT_AVX | XFEAT_AVX512;
+    } else {
+        xfeatures = strtoull(arg, &endptr, 0);
+        if (*endptr) {
+            fprintf(stderr,
+                    "Unable to parse '%s' in '%s' into an xfeatures integer mask\n",
+                    endptr, arg);
+            exit(1);
+        }
+    }
 }
 
 const int reginfo_size(void)
