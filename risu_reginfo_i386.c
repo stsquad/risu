@@ -11,19 +11,32 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stddef.h>
 #include <string.h>
 #include <ucontext.h>
 #include <assert.h>
+#include <cpuid.h>
 
 #include "risu.h"
 #include "risu_reginfo_i386.h"
 
-const struct option * const arch_long_opts;
-const char * const arch_extra_help;
+#include <asm/sigcontext.h>
+
+static uint64_t xfeatures = 3;  /* SSE */
+
+static const struct option extra_ops[] = {
+    {"xfeatures", required_argument, NULL, FIRST_ARCH_OPT },
+    {0, 0, 0, 0}
+};
+
+const struct option * const arch_long_opts = extra_ops;
+const char * const arch_extra_help
+    = "  --xfeatures=<mask>  Use features in mask for XSAVE\n";
 
 void process_arch_opt(int opt, const char *arg)
 {
-    abort();
+    assert(opt == FIRST_ARCH_OPT);
+    xfeatures = strtoull(arg, 0, 0);
 }
 
 const int reginfo_size(void)
@@ -31,12 +44,36 @@ const int reginfo_size(void)
     return sizeof(struct reginfo);
 }
 
+static void *xsave_feature_buf(struct _xstate *xs, int feature)
+{
+    unsigned int eax, ebx, ecx, edx;
+    int ok;
+
+    /*
+     * Get the location of the XSAVE feature from the cpuid leaf.
+     * Given that we know the xfeature bit is set, this must succeed.
+     */
+    ok = __get_cpuid_count(0xd, feature, &eax, &ebx, &ecx, &edx);
+    assert(ok);
+
+    /* Sanity check that the frame stored by the kernel contains the data. */
+    assert(xs->fpstate.sw_reserved.extended_size >= eax + ebx);
+
+    return (void *)xs + ebx;
+}
+
 /* reginfo_init: initialize with a ucontext */
 void reginfo_init(struct reginfo *ri, ucontext_t *uc)
 {
-    int i;
+    int i, nvecregs;
+    struct _fpstate *fp;
+    struct _xstate *xs;
+    uint64_t features;
 
     memset(ri, 0, sizeof(*ri));
+
+    /* Require master and apprentice to be given the same arguments.  */
+    ri->xfeatures = xfeatures;
 
     for (i = 0; i < NGREG; i++) {
         switch (i) {
@@ -79,12 +116,89 @@ void reginfo_init(struct reginfo *ri, ucontext_t *uc)
      * distinguish 'do compare' from 'stop'.
      */
     ri->faulting_insn = *(uint32_t *)uc->uc_mcontext.gregs[REG_E(IP)];
+
+    /*
+     * FP state is omitted if unused (aka in init state).
+     * Use the <asm/sigcontext.h> struct for access to AVX state.
+     */
+
+    fp = (struct _fpstate *)uc->uc_mcontext.fpregs;
+    if (fp == NULL) {
+        return;
+    }
+
+#ifdef __x86_64__
+    nvecregs = 16;
+#else
+    /* We don't (currently) care about the 80387 state, only SSE+.  */
+    if (fp->magic != X86_FXSR_MAGIC) {
+        return;
+    }
+    nvecregs = 8;
+#endif
+
+    /*
+     * Now we know that _fpstate contains FXSAVE data.
+     */
+    ri->mxcsr = fp->mxcsr;
+
+    for (i = 0; i < nvecregs; ++i) {
+#ifdef __x86_64__
+        memcpy(&ri->vregs[i], &fp->xmm_space[i * 4], 16);
+#else
+        memcpy(&ri->vregs[i], &fp->_xmm[i], 16);
+#endif
+    }
+
+    if (fp->sw_reserved.magic1 != FP_XSTATE_MAGIC1) {
+        return;
+    }
+    xs = (struct _xstate *)fp;
+    features = xfeatures & xs->xstate_hdr.xfeatures;
+
+    /*
+     * Now we know that _fpstate contains XSAVE data.
+     */
+
+    if (features & (1 << 2)) {
+        /* YMM_Hi128 state */
+        void *buf = xsave_feature_buf(xs, 2);
+        for (i = 0; i < nvecregs; ++i) {
+            memcpy(&ri->vregs[i].q[2], buf + 16 * i, 16);
+        }
+    }
+
+    if (features & (1 << 5)) {
+        /* Opmask state */
+        uint64_t *buf = xsave_feature_buf(xs, 5);
+        for (i = 0; i < 8; ++i) {
+            ri->kregs[i] = buf[i];
+        }
+    }
+
+    if (features & (1 << 6)) {
+        /* ZMM_Hi256 state */
+        void *buf = xsave_feature_buf(xs, 6);
+        for (i = 0; i < nvecregs; ++i) {
+            memcpy(&ri->vregs[i].q[4], buf + 32 * i, 32);
+        }
+    }
+
+#ifdef __x86_64__
+    if (features & (1 << 7)) {
+        /* Hi16_ZMM state */
+        void *buf = xsave_feature_buf(xs, 7);
+        for (i = 0; i < 16; ++i) {
+            memcpy(&ri->vregs[i + 16], buf + 64 * i, 64);
+        }
+    }
+#endif
 }
 
 /* reginfo_is_eq: compare the reginfo structs, returns nonzero if equal */
 int reginfo_is_eq(struct reginfo *m, struct reginfo *a)
 {
-    return 0 == memcmp(m, a, sizeof(*m));
+    return !memcmp(m, a, sizeof(*m));
 }
 
 static const char *const regname[NGREG] = {
@@ -126,28 +240,126 @@ static const char *const regname[NGREG] = {
 # define PRIxREG   "%08x"
 #endif
 
+static int get_nvecregs(uint64_t features)
+{
+#ifdef __x86_64__
+    return features & (1 << 7) ? 32 : 16;
+#else
+    return 8;
+#endif
+}
+
+static int get_nvecquads(uint64_t features)
+{
+    if (features & (1 << 6)) {
+        return 8;
+    } else if (features & (1 << 2)) {
+        return 4;
+    } else {
+        return 2;
+    }
+}
+
+static char get_vecletter(uint64_t features)
+{
+    if (features & (1 << 6 | 1 << 7)) {
+        return 'z';
+    } else if (features & (1 << 2)) {
+        return 'y';
+    } else {
+        return 'x';
+    }
+}
+
 /* reginfo_dump: print state to a stream, returns nonzero on success */
 int reginfo_dump(struct reginfo *ri, FILE *f)
 {
-    int i;
+    uint64_t features;
+    int i, j, n, w;
+    char r;
+
     fprintf(f, "  faulting insn %x\n", ri->faulting_insn);
     for (i = 0; i < NGREG; i++) {
         if (regname[i]) {
             fprintf(f, "  %-6s: " PRIxREG "\n", regname[i], ri->gregs[i]);
         }
     }
+
+    fprintf(f, "  mxcsr : %x\n", ri->mxcsr);
+    fprintf(f, "  xfeat : %" PRIx64 "\n", ri->xfeatures);
+
+    features = ri->xfeatures;
+    n = get_nvecregs(features);
+    w = get_nvecquads(features);
+    r = get_vecletter(features);
+
+    for (i = 0; i < n; i++) {
+        fprintf(f, "  %cmm%-3d: ", r, i);
+        for (j = w - 1; j >= 0; j--) {
+            fprintf(f, "%016" PRIx64 "%c",
+                    ri->vregs[i].q[j], j == 0 ? '\n' : ' ');
+        }
+    }
+
+    if (features & (1 << 5)) {
+        for (i = 0; i < 8; i++) {
+            fprintf(f, "  k%-5d: %016" PRIx64 "\n", i, ri->kregs[i]);
+        }
+    }
+
     return !ferror(f);
 }
 
 int reginfo_dump_mismatch(struct reginfo *m, struct reginfo *a, FILE *f)
 {
-    int i;
+    int i, j, n, w;
+    uint64_t features;
+    char r;
+
+    fprintf(f, "Mismatch (master v apprentice):\n");
+
     for (i = 0; i < NGREG; i++) {
         if (m->gregs[i] != a->gregs[i]) {
             assert(regname[i]);
-            fprintf(f, "Mismatch: %s: " PRIxREG " v " PRIxREG "\n",
+            fprintf(f, "  %-6s: " PRIxREG " v " PRIxREG "\n",
                     regname[i], m->gregs[i], a->gregs[i]);
         }
     }
+
+    if (m->mxcsr != a->mxcsr) {
+        fprintf(f, "  mxcsr : %x v %x\n", m->mxcsr, a->mxcsr);
+    }
+    if (m->xfeatures != a->xfeatures) {
+        fprintf(f, "  xfeat : %" PRIx64 " v %" PRIx64 "\n",
+                m->xfeatures, a->xfeatures);
+    }
+
+    features = m->xfeatures;
+    n = get_nvecregs(features);
+    w = get_nvecquads(features);
+    r = get_vecletter(features);
+
+    for (i = 0; i < n; i++) {
+        if (memcmp(&m->vregs[i], &a->vregs[i], w * 8)) {
+            fprintf(f, "  %cmm%-3d: ", r, i);
+            for (j = w - 1; j >= 0; j--) {
+                fprintf(f, "%016" PRIx64 "%c",
+                        m->vregs[i].q[j], j == 0 ? '\n' : ' ');
+            }
+            fprintf(f, "       v: ");
+            for (j = w - 1; j >= 0; j--) {
+                fprintf(f, "%016" PRIx64 "%c",
+                        a->vregs[i].q[j], j == 0 ? '\n' : ' ');
+            }
+        }
+    }
+
+    for (i = 0; i < 8; i++) {
+        if (m->kregs[i] != a->kregs[i]) {
+            fprintf(f, "  k%-5d: %016" PRIx64 " v %016" PRIx64 "\n",
+                    i, m->kregs[i], a->kregs[i]);
+        }
+    }
+
     return !ferror(f);
 }
