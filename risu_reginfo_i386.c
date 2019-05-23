@@ -22,7 +22,25 @@
 
 #include <asm/sigcontext.h>
 
-static uint64_t xfeatures = 3;  /* SSE */
+/*
+ * Refer to "Intel(R) 64 and IA-32 Architectures Software Developer's
+ * Manual", Volume 1, Section 13.1 "XSAVE-Supported Features and
+ * State-Component Bitmaps" for detailed discussion of these constants
+ * and their meaning.
+ */
+enum {
+    XFEAT_X87              = 1 << 0,
+    XFEAT_SSE              = 1 << 1,
+    XFEAT_AVX              = 1 << 2,
+    XFEAT_AVX512_OPMASK    = 1 << 5,
+    XFEAT_AVX512_ZMM_HI256 = 1 << 6,
+    XFEAT_AVX512_HI16_ZMM  = 1 << 7,
+    XFEAT_AVX512           = XFEAT_AVX512_OPMASK
+                           | XFEAT_AVX512_ZMM_HI256
+                           | XFEAT_AVX512_HI16_ZMM
+};
+
+static uint64_t xfeatures = XFEAT_X87 | XFEAT_SSE;
 
 static const struct option extra_ops[] = {
     {"xfeatures", required_argument, NULL, FIRST_ARCH_OPT },
@@ -160,34 +178,34 @@ void reginfo_init(struct reginfo *ri, ucontext_t *uc)
      * Now we know that _fpstate contains XSAVE data.
      */
 
-    if (features & (1 << 2)) {
+    if (features & XFEAT_AVX) {
         /* YMM_Hi128 state */
-        void *buf = xsave_feature_buf(xs, 2);
+        void *buf = xsave_feature_buf(xs, XFEAT_AVX);
         for (i = 0; i < nvecregs; ++i) {
             memcpy(&ri->vregs[i].q[2], buf + 16 * i, 16);
         }
     }
 
-    if (features & (1 << 5)) {
+    if (features & XFEAT_AVX512_OPMASK) {
         /* Opmask state */
-        uint64_t *buf = xsave_feature_buf(xs, 5);
+        uint64_t *buf = xsave_feature_buf(xs, XFEAT_AVX512_OPMASK);
         for (i = 0; i < 8; ++i) {
             ri->kregs[i] = buf[i];
         }
     }
 
-    if (features & (1 << 6)) {
+    if (features & XFEAT_AVX512_ZMM_HI256) {
         /* ZMM_Hi256 state */
-        void *buf = xsave_feature_buf(xs, 6);
+        void *buf = xsave_feature_buf(xs, XFEAT_AVX512_ZMM_HI256);
         for (i = 0; i < nvecregs; ++i) {
             memcpy(&ri->vregs[i].q[4], buf + 32 * i, 32);
         }
     }
 
 #ifdef __x86_64__
-    if (features & (1 << 7)) {
+    if (features & XFEAT_AVX512_HI16_ZMM) {
         /* Hi16_ZMM state */
-        void *buf = xsave_feature_buf(xs, 7);
+        void *buf = xsave_feature_buf(xs, XFEAT_AVX512_HI16_ZMM);
         for (i = 0; i < 16; ++i) {
             memcpy(&ri->vregs[i + 16], buf + 64 * i, 64);
         }
@@ -243,7 +261,7 @@ static const char *const regname[NGREG] = {
 static int get_nvecregs(uint64_t features)
 {
 #ifdef __x86_64__
-    return features & (1 << 7) ? 32 : 16;
+    return features & XFEAT_AVX512_HI16_ZMM ? 32 : 16;
 #else
     return 8;
 #endif
@@ -251,9 +269,9 @@ static int get_nvecregs(uint64_t features)
 
 static int get_nvecquads(uint64_t features)
 {
-    if (features & (1 << 6)) {
+    if (features & XFEAT_AVX512_ZMM_HI256) {
         return 8;
-    } else if (features & (1 << 2)) {
+    } else if (features & XFEAT_AVX) {
         return 4;
     } else {
         return 2;
@@ -262,9 +280,9 @@ static int get_nvecquads(uint64_t features)
 
 static char get_vecletter(uint64_t features)
 {
-    if (features & (1 << 6 | 1 << 7)) {
+    if (features & (XFEAT_AVX512_ZMM_HI256 | XFEAT_AVX512_HI16_ZMM)) {
         return 'z';
-    } else if (features & (1 << 2)) {
+    } else if (features & XFEAT_AVX) {
         return 'y';
     } else {
         return 'x';
@@ -301,7 +319,7 @@ int reginfo_dump(struct reginfo *ri, FILE *f)
         }
     }
 
-    if (features & (1 << 5)) {
+    if (features & XFEAT_AVX512_OPMASK) {
         for (i = 0; i < 8; i++) {
             fprintf(f, "  k%-5d: %016" PRIx64 "\n", i, ri->kregs[i]);
         }
