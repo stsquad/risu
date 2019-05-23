@@ -12,7 +12,8 @@
 #ifndef RISU_REGINFO_I386_H
 #define RISU_REGINFO_I386_H
 
-/* This is the data structure we pass over the socket.
+/*
+ * This is the data structure we pass over the socket.
  * It is a simplified and reduced subset of what can
  * be obtained with a ucontext_t*
  */
@@ -21,17 +22,14 @@ struct reginfo {
     gregset_t gregs;
 };
 
-#ifndef REG_GS
-/* Assume that either we get all these defines or none */
-#   define REG_GS      0
-#   define REG_FS      1
-#   define REG_ES      2
-#   define REG_DS      3
-#   define REG_ESP     7
-#   define REG_TRAPNO 12
-#   define REG_EIP    14
-#   define REG_EFL    16
-#   define REG_UESP   17
-#endif /* !defined(REG_GS) */
+/*
+ * For i386, the defines are named REG_EAX, etc.
+ * For x86_64, the defines are named REG_RAX, etc.
+ */
+#ifdef __x86_64__
+# define REG_E(X)   REG_R##X
+#else
+# define REG_E(X)   REG_E##X
+#endif
 
 #endif /* RISU_REGINFO_I386_H */
