@@ -25,12 +25,37 @@ static int insn_is_ud2(uint32_t insn)
 
 void advance_pc(void *vuc)
 {
-    /* We assume that this is either UD1 or UD2.
-     * This would need tweaking if we want to test
-     * expected undefs on x86.
+    ucontext_t *uc = (ucontext_t *) vuc;
+
+    /*
+     * We assume that this is UD1 as per get_risuop below.
+     * This would need tweaking if we want to test expected undefs.
      */
-    ucontext_t *uc = vuc;
-    uc->uc_mcontext.gregs[REG_EIP] += 2;
+    uc->uc_mcontext.gregs[REG_E(IP)] += 3;
+}
+
+void set_ucontext_paramreg(void *vuc, uint64_t value)
+{
+    ucontext_t *uc = (ucontext_t *) vuc;
+    uc->uc_mcontext.gregs[REG_E(AX)] = value;
+}
+
+uint64_t get_reginfo_paramreg(struct reginfo *ri)
+{
+    return ri->gregs[REG_E(AX)];
+}
+
+int get_risuop(struct reginfo *ri)
+{
+    if ((ri->faulting_insn & 0xf8ffff) == 0xc0b90f) { /* UD1 %xxx,%eax */
+        return (ri->faulting_insn >> 16) & 7;
+    }
+    return -1;
+}
+
+uintptr_t get_pc(struct reginfo *ri)
+{
+    return ri->gregs[REG_E(IP)];
 }
 
 int send_register_info(int sock, void *uc)
