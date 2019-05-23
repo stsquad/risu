@@ -49,6 +49,9 @@ $(PROG): $(OBJS)
 %_$(ARCH).elf: %_$(ARCH).s
 	$(AS) -o $@ $<
 
+%_$(ARCH).elf: %_$(ARCH).S
+	$(CC) $(CPPFLAGS) -o $@ -c $<
+
 clean:
 	rm -f $(PROG) $(OBJS) $(BINS)
 
