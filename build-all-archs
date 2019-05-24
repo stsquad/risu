@@ -39,7 +39,7 @@ while [[ "$1" = -* ]]; do
             ;;
         --use-docker)
             if [ -z "$arg" ]; then
-                default_tags=$(docker images qemu --format "{{.Repository}}:{{.Tag}}" | grep "\(arm\|ppc64el\|m68k\).*cross$")
+                default_tags=$(docker images qemu --format "{{.Repository}}:{{.Tag}}" | grep "\(arm\|ppc64el\|m68k\|i386\).*cross$")
                 docker_tags=$(echo $default_tags | sed 's/\n/\s/g' )
             else
                 docker_tags="$arg"
@@ -74,7 +74,7 @@ fi
 DOCKER_RUN="docker run --rm -u $(id -u) -v $(pwd):$(pwd) -w $(pwd)"
 
 program_exists() {
-    if [ ! -z "$docker_tags" ]; then
+    if [[ ! -z "$docker_tags" && ! "$1" == "x86_64-linux-gnu-gcc" ]]; then
         use_docker_tag=""
         for tag in $docker_tags; do
             if ${DOCKER_RUN} ${tag} /bin/bash -c "command -v $1 >/dev/null"; then
@@ -88,8 +88,10 @@ program_exists() {
 }
 
 # powerpc64-linux-gnu doesn't work at the moment, so not yet listed.
-for triplet in aarch64-linux-gnu arm-linux-gnueabihf m68k-linux-gnu \
-    powerpc64le-linux-gnu powerpc64-linux-gnu ; do
+for triplet in i386-linux-gnu i686-linux-gnu x86_64-linux-gnu \
+                   aarch64-linux-gnu arm-linux-gnueabihf \
+                   m68k-linux-gnu \
+                   powerpc64le-linux-gnu powerpc64-linux-gnu ; do
 
     if ! program_exists "${triplet}-gcc"; then
         echo "Skipping ${triplet}: no compiler found"
