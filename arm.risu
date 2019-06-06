@@ -111,11 +111,6 @@ SBC_imm A1 cond:4 0010110 s:1 rn:4 rd:4 imm:12
 SBC_reg A1 cond:4 0000110 s:1 rn:4 rd:4 imm:5 type:2 0 rm:4
 SBC_rsr A1 cond:4 0000110 s:1 rn:4 rd:4 rs:4 0 type:2 1 rm:4
 
-# vector duplicate (reg)
-# b:e == 11 UNDEF
-VDUP A1a cond:4 1110 1 b 1 0 vd:3 0 rt:4 1011 d 0 e 1 0000 { ($b == 0) || ($e == 0); }
-VDUP A1b cond:4 1110 1 b 0 0 vd:4 rt:4 1011 d 0 e 1 0000 { ($b == 0) || ($e == 0); }
-
 ########### Neon loads and stores #########################
 # These patterns cover all the Neon element/structure
 # load store insns, ie the whole of the space in section
@@ -707,9 +702,6 @@ VFNM A1 cond:4 11101 d 01 vn:4 vd:4 101 sz n op m 0 vm:4
 ########### Extension register load/store #################
 # The following sets of patterns cover:
 #  'extension register load/store insns' (A7.6)
-# Still TODO:
-#  '8, 16 and 32 bit transfers' (A7.8)
-#  '64 bit transfers (A7.9)
 # as described in DDI0406B
 ###########################################################
 
@@ -775,6 +767,31 @@ VLDR A1a cond:4 1101 1 d 01 rn:4 vd:4 101 x imm:8 \
 VLDR A1b cond:4 1101 1 d 01 rn:4 vd:4 101 x imm:8 \
  !memory { reg_minus_imm($rn, $imm * 4); }
 
+########### Extension register transfer ###################
+# The following sets of patterns cover:
+#  '8, 16 and 32-bit transfer between ARM core and
+#  extension registers' (A7.8)
+# as described in DDI0406C
+# with the exception of VMSR/VMRS.
+###########################################################
+
+VMOV_core_single A1 cond:4 1110 000 op:1 vd:4 rt:4 1010 n:1 0010000
+VMOV_core_scalar A1 cond:4 1110 0 opc:2 0 vd:4 rt:4 1011 d:1 opc2:2 10000
+VMOV_scalar_core A1 cond:4 1110 u:1 opc:2 1 vn:4 rt:4 1011 n:1 opc2:2 10000
+
+# vector duplicate (reg)
+# b:e == 11 UNDEF
+VDUP A1a cond:4 1110 1 b 1 0 vd:3 0 rt:4 1011 d 0 e 1 0000 { ($b == 0) || ($e == 0); }
+VDUP A1b cond:4 1110 1 b 0 0 vd:4 rt:4 1011 d 0 e 1 0000 { ($b == 0) || ($e == 0); }
+
+########### Extension register transfer ###################
+# The following sets of patterns cover:
+#  '64-bit transfers between ARM core and extension
+#  registers' (A7.8)
+# as described in DDI0406C
+###########################################################
+VMOV_core_2single A1 cond:4 1100 010 op:1 rt2:4 rt:4 1010 00 m:1 1 vm:4 { ($vm != 0xf || $m != 1) && ($op == 0 || $rt2 != $rt); }
+VMOV_core_double A1 cond:4 1100 010 op:1 rt2:4 rt:4 1011 00 m:1 1 vm:4 { $op == 0 || $rt2 != $rt; }
 
 #####
 # v8 only insns
