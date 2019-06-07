@@ -16,6 +16,7 @@
 #include <string.h>
 #include <math.h>
 #include <stdlib.h>
+#include <sys/user.h>
 
 #include "risu.h"
 #include "risu_reginfo_ppc64.h"
