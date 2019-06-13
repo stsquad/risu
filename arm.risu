@@ -613,7 +613,8 @@ VCLT0 A1 1111 0011 1 d 11 sz:2 01 vd:4 0 f 100 q m 0 vm:4
 VABS A1 1111 0011 1 d 11 sz:2 01 vd:4 0 f 110 q m 0 vm:4
 VNEG A1 1111 0011 1 d 11 sz:2 01 vd:4 0 f 111 q m 0 vm:4
 VSWP A1 1111 0011 1 d 11 sz:2 10 vd:4 00000 q m 0 vm:4
-VTRN A1 1111 0011 1 d 11 sz:2 10 vd:4 00001 q m 0 vm:4
+# d == m gives UNKNOWN results, so avoid it
+VTRN A1 1111 0011 1 d 11 sz:2 10 vd:4 00001 q m 0 vm:4 { ($d != $m) || ($vd != $vm); }
 # d == m gives UNKNOWN results, so avoid it
 VUZP A1 1111 0011 1 d 11 sz:2 10 vd:4 00010 q m 0 vm:4 { ($d != $m) || ($vd != $vm); }
 VZIP A1 1111 0011 1 d 11 sz:2 10 vd:4 00011 q m 0 vm:4 { ($d != $m) || ($vd != $vm); }
