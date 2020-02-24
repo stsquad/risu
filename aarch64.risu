@@ -3019,3 +3019,35 @@ SM3TT2B A64_V 1100 1110 010 rm:5 10 imm:2 11 rn:5 rd:5
 XAR A64_V 1100 1110 100 rm:5 imm:6 rn:5 rd:5
 
 @
+
+# v8.3-RCPC instructions
+@v8_3_rcpc
+
+# LDAPR, LDAPRH, LDAPRB
+# As usual, the $rn != $rt constraint is risu-imposed, not architectural
+LDAPR A64 sz:2 111000 101 11111 1100 00 rn:5 rt:5 \
+!constraints { $rn != 31 && $rn != $rt } \
+!memory { align(1 << $sz); reg_plus_imm($rn, 0); }
+
+@
+
+# v8.4-RCPC instructions
+# As usual, the $rn != $rt constraint is risu-imposed, not architectural
+@v8_4_rcpc
+STLUR A64 sz:2 011001 00 0 imm:9 00 rn:5 rt:5 \
+!constraints { $rn != 31 && $rn != $rt } \
+!memory { align(1 << $sz); reg_plus_imm($rn, $imm); }
+
+LDAPUR A64 sz:2 011001 01 0 imm:9 00 rn:5 rt:5 \
+!constraints { $rn != 31 && $rn != $rt } \
+!memory { align(1 << $sz); reg_plus_imm($rn, $imm); }
+
+LDAPURS64 A64 sz:2 011001 10 0 imm:9 00 rn:5 rt:5 \
+!constraints { $rn != 31 && $rn != $rt && $sz != 3 } \
+!memory { align(1 << $sz); reg_plus_imm($rn, $imm); }
+
+LDAPURS32 A64 sz:2 011001 11 0 imm:9 00 rn:5 rt:5 \
+!constraints { $rn != 31 && $rn != $rt && $sz < 2 } \
+!memory { align(1 << $sz); reg_plus_imm($rn, $imm); }
+
+@
