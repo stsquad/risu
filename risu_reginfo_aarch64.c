@@ -44,8 +44,6 @@ const char * const arch_extra_help
 void process_arch_opt(int opt, const char *arg)
 {
 #ifdef SVE_MAGIC
-    long want, got;
-
     assert(opt == FIRST_ARCH_OPT);
     test_sve = strtol(arg, 0, 10);
 
@@ -53,19 +51,34 @@ void process_arch_opt(int opt, const char *arg)
         fprintf(stderr, "Invalid value for VQ (1-%d)\n", SVE_VQ_MAX);
         exit(EXIT_FAILURE);
     }
-    want = sve_vl_from_vq(test_sve);
-    got = prctl(PR_SVE_SET_VL, want);
-    if (want != got) {
-        if (got < 0) {
-            perror("prctl PR_SVE_SET_VL");
-        } else {
-            fprintf(stderr, "Unsupported value for VQ (%d != %d)\n",
-                    test_sve, (int)sve_vq_from_vl(got));
-        }
-        exit(EXIT_FAILURE);
-    }
 #else
     abort();
+#endif
+}
+
+void arch_init(void)
+{
+#ifdef SVE_MAGIC
+    long want, got1, got2;
+
+    if (test_sve == 0) {
+        return;
+    }
+
+    want = sve_vl_from_vq(test_sve);
+    asm(".arch_extension sve\n\trdvl %0, #1" : "=r"(got1));
+    if (want != got1) {
+        got2 = prctl(PR_SVE_SET_VL, want);
+        if (want != got2) {
+            if (got2 < 0) {
+                perror("prctl PR_SVE_SET_VL");
+                got2 = got1;
+            }
+            fprintf(stderr, "Unsupported value for VQ (%d != %d)\n",
+                    test_sve, (int)sve_vq_from_vl(got1));
+            exit(EXIT_FAILURE);
+        }
+    }
 #endif
 }
 
@@ -170,6 +183,7 @@ void reginfo_init(struct reginfo *ri, ucontext_t *uc)
         if (sve->head.size < SVE_SIG_CONTEXT_SIZE(vq)) {
             if (sve->head.size == sizeof(*sve)) {
                 /* SVE state is empty -- not an error.  */
+                goto do_simd;
             } else {
                 fprintf(stderr, "risu_reginfo_aarch64: "
                         "failed to get complete SVE state\n");
@@ -182,6 +196,7 @@ void reginfo_init(struct reginfo *ri, ucontext_t *uc)
                SVE_SIG_CONTEXT_SIZE(vq) - SVE_SIG_REGS_OFFSET);
         return;
     }
+ do_simd:
 #endif /* SVE_MAGIC */
 
     for (i = 0; i < 32; i++) {
@@ -260,8 +275,9 @@ int reginfo_dump(struct reginfo *ri, FILE * f)
     fprintf(f, "  fpcr   : %08x\n", ri->fpcr);
 
 #ifdef SVE_MAGIC
-    if (test_sve) {
-        int q, vq = test_sve;
+    if (ri->sve_vl) {
+        int vq = sve_vq_from_vl(ri->sve_vl);
+        int q;
 
         fprintf(f, "  vl     : %d\n", ri->sve_vl);
 
@@ -339,12 +355,11 @@ int reginfo_dump_mismatch(struct reginfo *m, struct reginfo *a, FILE * f)
     }
 
 #ifdef SVE_MAGIC
-    if (test_sve) {
+    if (m->sve_vl != a->sve_vl) {
+        fprintf(f, "  vl    : %d vs %d\n", m->sve_vl, a->sve_vl);
+    }
+    if (m->sve_vl) {
         int vq = sve_vq_from_vl(m->sve_vl);
-
-        if (m->sve_vl != a->sve_vl) {
-            fprintf(f, "  vl    : %d vs %d\n", m->sve_vl, a->sve_vl);
-        }
 
         for (i = 0; i < SVE_NUM_ZREGS; i++) {
             uint64_t *zm = reginfo_zreg(m, vq, i);

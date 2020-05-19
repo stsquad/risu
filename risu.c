@@ -249,6 +249,93 @@ static int apprentice(void)
     }
 }
 
+static int dump_trace(void)
+{
+    trace_header_t header;
+    union {
+        struct reginfo ri;
+        unsigned char memblock[MEMBLOCKLEN];
+    } u;
+    const char *op_name;
+
+    while (1) {
+        if (read_buffer(&header, sizeof(header))) {
+            fprintf(stderr, "Trace header read failed\n");
+            return EXIT_FAILURE;
+        }
+
+        if (header.magic != RISU_MAGIC) {
+            fprintf(stderr, "Unexpected header magic (%#x)\n", header.magic);
+            return EXIT_FAILURE;
+        }
+
+        switch (header.risu_op) {
+        case OP_COMPARE:
+           op_name = "COMPARE";
+           break;
+        case OP_TESTEND:
+           op_name = "TESTEND";
+           break;
+        case OP_SETMEMBLOCK:
+           op_name = "SETMEMBLOCK";
+           break;
+        case OP_GETMEMBLOCK:
+           op_name = "GETMEMBLOCK";
+           break;
+        case OP_COMPAREMEM:
+           op_name = "COMPAREMEM";
+           break;
+        case OP_SIGILL:
+           op_name = "SIGILL";
+           break;
+        default:
+           op_name = "<unknown>";
+           break;
+        }
+
+        switch (header.risu_op) {
+        case OP_COMPARE:
+        case OP_TESTEND:
+        case OP_SIGILL:
+            if (header.size > sizeof(u.ri)) {
+                fprintf(stderr, "Unexpected trace size (%u)\n", header.size);
+                return EXIT_FAILURE;
+            }
+            if (read_buffer(&u.ri, header.size)) {
+                fprintf(stderr, "Reginfo read failed\n");
+                return EXIT_FAILURE;
+            }
+            if (header.size != reginfo_size(&u.ri)) {
+                fprintf(stderr, "Unexpected trace size (%u)\n", header.size);
+                return EXIT_FAILURE;
+            }
+            printf("%s: (pc %#lx)\n", op_name, (unsigned long)header.pc);
+            reginfo_dump(&u.ri, stdout);
+            putchar('\n');
+            if (header.risu_op == OP_TESTEND) {
+                return EXIT_SUCCESS;
+            }
+            break;
+
+        case OP_COMPAREMEM:
+            if (header.size != MEMBLOCKLEN) {
+                fprintf(stderr, "Unexpected trace size (%u)\n", header.size);
+                return EXIT_FAILURE;
+            }
+            if (read_buffer(&u.memblock, MEMBLOCKLEN)) {
+                fprintf(stderr, "Memblock read failed\n");
+                return EXIT_FAILURE;
+            }
+            /* TODO: Dump 8k of data? */
+            /* fall through */
+
+        default:
+            printf("%s\n", op_name);
+            break;
+        }
+    }
+}
+
 static int ismaster;
 
 static void usage(void)
@@ -261,6 +348,7 @@ static void usage(void)
     fprintf(stderr, "between master and apprentice risu processes.\n\n");
     fprintf(stderr, "Options:\n");
     fprintf(stderr, "  --master          Be the master (server)\n");
+    fprintf(stderr, "  -d, --dump=FILE   Dump " TRACE_TYPE " trace file\n");
     fprintf(stderr, "  -t, --trace=FILE  Record/playback " TRACE_TYPE " trace file\n");
     fprintf(stderr,
             "  -h, --host=HOST   Specify master host machine (apprentice only)"
@@ -281,11 +369,12 @@ static struct option * setup_options(char **short_opts)
         {"host", required_argument, 0, 'h'},
         {"port", required_argument, 0, 'p'},
         {"trace", required_argument, 0, 't'},
+        {"dump", required_argument, 0, 'd'},
         {0, 0, 0, 0}
     };
     struct option *lopts = &default_longopts[0];
 
-    *short_opts = "h:p:t:";
+    *short_opts = "d:h:p:t:";
 
     if (arch_long_opts) {
         const size_t osize = sizeof(struct option);
@@ -316,6 +405,7 @@ int main(int argc, char **argv)
     char *trace_fn = NULL;
     struct option *longopts;
     char *shortopts;
+    bool dump = false;
 
     longopts = setup_options(&shortopts);
 
@@ -329,6 +419,10 @@ int main(int argc, char **argv)
         switch (c) {
         case 0:
             /* flag set by getopt_long, do nothing */
+            break;
+        case 'd':
+            trace_fn = optarg;
+            trace = dump = true;
             break;
         case 't':
             trace_fn = optarg;
@@ -351,6 +445,11 @@ int main(int argc, char **argv)
         }
     }
 
+    if (dump && ismaster) {
+        usage();
+        exit(1);
+    }
+
     if (trace) {
         if (strcmp(trace_fn, "-") == 0) {
             comm_fd = ismaster ? STDOUT_FILENO : STDIN_FILENO;
@@ -366,6 +465,10 @@ int main(int argc, char **argv)
         }
     }
 
+    if (dump) {
+        return dump_trace();
+    }
+
     imgfile = argv[optind];
     if (!imgfile) {
         fprintf(stderr, "Error: must specify image file name\n\n");
@@ -374,6 +477,9 @@ int main(int argc, char **argv)
     }
 
     load_image(imgfile);
+
+    /* Select requested SVE vector length. */
+    arch_init();
 
     if (ismaster) {
         if (!trace) {
