@@ -21,10 +21,11 @@ uint8_t apprentice_memblock[MEMBLOCKLEN];
 static int mem_used;
 static int packet_mismatch;
 
-RisuResult send_register_info(write_fn write_fn, void *uc)
+RisuResult send_register_info(void *uc)
 {
     struct reginfo ri;
     trace_header_t header;
+    RisuResult res;
     RisuOp op;
 
     reginfo_init(&ri, uc);
@@ -33,8 +34,9 @@ RisuResult send_register_info(write_fn write_fn, void *uc)
     /* Write a header with PC/op to keep in sync */
     header.pc = get_pc(&ri);
     header.risu_op = op;
-    if (write_fn(&header, sizeof(header)) != 0) {
-        return RES_BAD_IO;
+    res = write_buffer(&header, sizeof(header));
+    if (res != RES_OK) {
+        return res;
     }
 
     switch (op) {
@@ -45,11 +47,12 @@ RisuResult send_register_info(write_fn write_fn, void *uc)
          * Do a simple register compare on (a) explicit request
          * (b) end of test (c) a non-risuop UNDEF
          */
-        if (write_fn(&ri, reginfo_size()) != 0) {
-            return RES_BAD_IO;
+        res = write_buffer(&ri, reginfo_size());
+        /* For OP_TEST_END, force exit. */
+        if (res == RES_OK && op == OP_TESTEND) {
+            res = RES_END;
         }
-        /* For OP_TEST_END, force return 1 to exit. */
-        return op == OP_TESTEND ? RES_END : RES_OK;
+        break;
     case OP_SETMEMBLOCK:
         memblock = (void *)(uintptr_t)get_reginfo_paramreg(&ri);
         break;
@@ -58,12 +61,11 @@ RisuResult send_register_info(write_fn write_fn, void *uc)
                               get_reginfo_paramreg(&ri) + (uintptr_t)memblock);
         break;
     case OP_COMPAREMEM:
-        return write_fn(memblock, MEMBLOCKLEN);
-        break;
+        return write_buffer(memblock, MEMBLOCKLEN);
     default:
         abort();
     }
-    return RES_OK;
+    return res;
 }
 
 /* Read register info from the socket and compare it with that from the
@@ -74,29 +76,29 @@ RisuResult send_register_info(write_fn write_fn, void *uc)
  * that says whether it is register or memory data, so if the two
  * sides get out of sync then we will fail obscurely.
  */
-RisuResult recv_and_compare_register_info(read_fn read_fn,
-                                          respond_fn resp_fn, void *uc)
+RisuResult recv_and_compare_register_info(void *uc)
 {
-    RisuResult resp = RES_OK;
+    RisuResult res;
     trace_header_t header;
     RisuOp op;
 
     reginfo_init(&master_ri, uc);
     op = get_risuop(&master_ri);
 
-    if (read_fn(&header, sizeof(header)) != 0) {
-        return RES_BAD_IO;
+    res = read_buffer(&header, sizeof(header));
+    if (res != RES_OK) {
+        return res;
     }
 
     if (header.risu_op != op) {
         /* We are out of sync */
-        resp = RES_BAD_IO;
-        resp_fn(resp);
-        return resp;
+        res = RES_BAD_IO;
+        respond(res);
+        return res;
     }
 
     /* send OK for the header */
-    resp_fn(RES_OK);
+    respond(RES_OK);
 
     switch (op) {
     case OP_COMPARE:
@@ -105,16 +107,16 @@ RisuResult recv_and_compare_register_info(read_fn read_fn,
         /* Do a simple register compare on (a) explicit request
          * (b) end of test (c) a non-risuop UNDEF
          */
-        if (read_fn(&apprentice_ri, reginfo_size())) {
+        res = read_buffer(&apprentice_ri, reginfo_size());
+        if (res != RES_OK) {
             packet_mismatch = 1;
-            resp = RES_BAD_IO;
         } else if (!reginfo_is_eq(&master_ri, &apprentice_ri)) {
             /* register mismatch */
-            resp = RES_MISMATCH;
+            res = RES_MISMATCH;
         } else if (op == OP_TESTEND) {
-            resp = RES_END;
+            res = RES_END;
         }
-        resp_fn(resp);
+        respond(res);
         break;
     case OP_SETMEMBLOCK:
         memblock = (void *)(uintptr_t)get_reginfo_paramreg(&master_ri);
@@ -125,20 +127,20 @@ RisuResult recv_and_compare_register_info(read_fn read_fn,
         break;
     case OP_COMPAREMEM:
         mem_used = 1;
-        if (read_fn(apprentice_memblock, MEMBLOCKLEN)) {
+        res = read_buffer(apprentice_memblock, MEMBLOCKLEN);
+        if (res != RES_OK) {
             packet_mismatch = 1;
-            resp = RES_BAD_IO;
         } else if (memcmp(memblock, apprentice_memblock, MEMBLOCKLEN) != 0) {
             /* memory mismatch */
-            resp = RES_MISMATCH;
+            res = RES_MISMATCH;
         }
-        resp_fn(resp);
+        respond(res);
         break;
     default:
         abort();
     }
 
-    return resp;
+    return res;
 }
 
 /* Print a useful report on the status of the last comparison

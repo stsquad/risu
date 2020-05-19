@@ -46,44 +46,15 @@ static sigjmp_buf jmpbuf;
 
 #define ARRAY_SIZE(x)	(sizeof(x) / sizeof((x)[0]))
 
-/* Master functions */
+/* I/O functions */
 
-int read_sock(void *ptr, size_t bytes)
-{
-    return recv_data_pkt(comm_fd, ptr, bytes);
-}
-
-int write_trace(void *ptr, size_t bytes)
+RisuResult read_buffer(void *ptr, size_t bytes)
 {
     size_t res;
 
-#ifdef HAVE_ZLIB
-    if (comm_fd == STDOUT_FILENO) {
-#endif
-        res = write(comm_fd, ptr, bytes);
-#ifdef HAVE_ZLIB
-    } else {
-        res = gzwrite(gz_trace_file, ptr, bytes);
+    if (!trace) {
+        return recv_data_pkt(comm_fd, ptr, bytes);
     }
-#endif
-    return (res == bytes) ? 0 : 1;
-}
-
-void respond_sock(RisuResult r)
-{
-    send_response_byte(comm_fd, r);
-}
-
-/* Apprentice function */
-
-int write_sock(void *ptr, size_t bytes)
-{
-    return send_data_pkt(comm_fd, ptr, bytes);
-}
-
-int read_trace(void *ptr, size_t bytes)
-{
-    size_t res;
 
 #ifdef HAVE_ZLIB
     if (comm_fd == STDIN_FILENO) {
@@ -95,21 +66,34 @@ int read_trace(void *ptr, size_t bytes)
     }
 #endif
 
-    return (res == bytes) ? 0 : 1;
+    return res == bytes ? RES_OK : RES_BAD_IO;
 }
 
-void respond_trace(RisuResult r)
+RisuResult write_buffer(void *ptr, size_t bytes)
 {
-    switch (r) {
-    case RES_OK:
-    case RES_END:
-        break;
-    default:
-        /* mismatch - if tracing we need to report, otherwise barf */
-        if (!trace) {
-            abort();
-        }
-        break;
+    size_t res;
+
+    if (!trace) {
+        return send_data_pkt(comm_fd, ptr, bytes);
+    }
+
+#ifdef HAVE_ZLIB
+    if (comm_fd == STDOUT_FILENO) {
+#endif
+        res = write(comm_fd, ptr, bytes);
+#ifdef HAVE_ZLIB
+    } else {
+        res = gzwrite(gz_trace_file, ptr, bytes);
+    }
+#endif
+
+    return res == bytes ? RES_OK : RES_BAD_IO;
+}
+
+void respond(RisuResult r)
+{
+    if (!trace) {
+        send_response_byte(comm_fd, r);
     }
 }
 
@@ -119,9 +103,9 @@ static void master_sigill(int sig, siginfo_t *si, void *uc)
     signal_count++;
 
     if (trace) {
-        r = send_register_info(write_trace, uc);
+        r = send_register_info(uc);
     } else {
-        r = recv_and_compare_register_info(read_sock, respond_sock, uc);
+        r = recv_and_compare_register_info(uc);
     }
 
     switch (r) {
@@ -141,9 +125,9 @@ static void apprentice_sigill(int sig, siginfo_t *si, void *uc)
     signal_count++;
 
     if (trace) {
-        r = recv_and_compare_register_info(read_trace, respond_trace, uc);
+        r = recv_and_compare_register_info(uc);
     } else {
-        r = send_register_info(write_sock, uc);
+        r = send_register_info(uc);
     }
 
     switch (r) {
