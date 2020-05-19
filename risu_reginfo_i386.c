@@ -74,7 +74,7 @@ void process_arch_opt(int opt, const char *arg)
     }
 }
 
-const int reginfo_size(void)
+int reginfo_size(struct reginfo *ri)
 {
     return sizeof(struct reginfo);
 }

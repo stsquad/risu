@@ -38,7 +38,7 @@ RisuResult send_register_info(void *uc)
     case OP_TESTEND:
     case OP_COMPARE:
     case OP_SIGILL:
-        header.size = reginfo_size();
+        header.size = reginfo_size(&ri);
         extra = &ri;
         break;
 
@@ -109,7 +109,7 @@ RisuResult recv_and_compare_register_info(void *uc)
     case OP_TESTEND:
     case OP_COMPARE:
     case OP_SIGILL:
-        extra_size = reginfo_size();
+        extra_size = reginfo_size(&master_ri);
         break;
     case OP_SETMEMBLOCK:
     case OP_GETMEMBLOCK:
@@ -217,7 +217,7 @@ void report_mismatch_header(void)
         case OP_COMPARE:
         case OP_SIGILL:
             kind = "reginfo";
-            a_sz = reginfo_size();
+            a_sz = reginfo_size(&apprentice_ri);
             break;
         case OP_SETMEMBLOCK:
         case OP_GETMEMBLOCK:
