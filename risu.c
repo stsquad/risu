@@ -69,7 +69,7 @@ int write_trace(void *ptr, size_t bytes)
     return (res == bytes) ? 0 : 1;
 }
 
-void respond_sock(int r)
+void respond_sock(RisuResult r)
 {
     send_response_byte(comm_fd, r);
 }
@@ -98,11 +98,11 @@ int read_trace(void *ptr, size_t bytes)
     return (res == bytes) ? 0 : 1;
 }
 
-void respond_trace(int r)
+void respond_trace(RisuResult r)
 {
     switch (r) {
-    case 0: /* test ok */
-    case 1: /* end of test */
+    case RES_OK:
+    case RES_END:
         break;
     default:
         /* mismatch - if tracing we need to report, otherwise barf */
@@ -115,7 +115,7 @@ void respond_trace(int r)
 
 static void master_sigill(int sig, siginfo_t *si, void *uc)
 {
-    int r;
+    RisuResult r;
     signal_count++;
 
     if (trace) {
@@ -125,7 +125,7 @@ static void master_sigill(int sig, siginfo_t *si, void *uc)
     }
 
     switch (r) {
-    case 0:
+    case RES_OK:
         /* match OK */
         advance_pc(uc);
         return;
@@ -137,7 +137,7 @@ static void master_sigill(int sig, siginfo_t *si, void *uc)
 
 static void apprentice_sigill(int sig, siginfo_t *si, void *uc)
 {
-    int r;
+    RisuResult r;
     signal_count++;
 
     if (trace) {
@@ -147,11 +147,11 @@ static void apprentice_sigill(int sig, siginfo_t *si, void *uc)
     }
 
     switch (r) {
-    case 0:
+    case RES_OK:
         /* match OK */
         advance_pc(uc);
         return;
-    case 1:
+    case RES_END:
         /* end of test */
         exit(EXIT_SUCCESS);
     default:

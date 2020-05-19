@@ -21,7 +21,7 @@ uint8_t apprentice_memblock[MEMBLOCKLEN];
 static int mem_used;
 static int packet_mismatch;
 
-int send_register_info(write_fn write_fn, void *uc)
+RisuResult send_register_info(write_fn write_fn, void *uc)
 {
     struct reginfo ri;
     trace_header_t header;
@@ -34,7 +34,7 @@ int send_register_info(write_fn write_fn, void *uc)
     header.pc = get_pc(&ri);
     header.risu_op = op;
     if (write_fn(&header, sizeof(header)) != 0) {
-        return -1;
+        return RES_BAD_IO;
     }
 
     switch (op) {
@@ -46,10 +46,10 @@ int send_register_info(write_fn write_fn, void *uc)
          * (b) end of test (c) a non-risuop UNDEF
          */
         if (write_fn(&ri, reginfo_size()) != 0) {
-            return -1;
+            return RES_BAD_IO;
         }
         /* For OP_TEST_END, force return 1 to exit. */
-        return op == OP_TESTEND;
+        return op == OP_TESTEND ? RES_END : RES_OK;
     case OP_SETMEMBLOCK:
         memblock = (void *)(uintptr_t)get_reginfo_paramreg(&ri);
         break;
@@ -63,7 +63,7 @@ int send_register_info(write_fn write_fn, void *uc)
     default:
         abort();
     }
-    return 0;
+    return RES_OK;
 }
 
 /* Read register info from the socket and compare it with that from the
@@ -74,10 +74,10 @@ int send_register_info(write_fn write_fn, void *uc)
  * that says whether it is register or memory data, so if the two
  * sides get out of sync then we will fail obscurely.
  */
-int recv_and_compare_register_info(read_fn read_fn,
-                                   respond_fn resp_fn, void *uc)
+RisuResult recv_and_compare_register_info(read_fn read_fn,
+                                          respond_fn resp_fn, void *uc)
 {
-    int resp = 0;
+    RisuResult resp = RES_OK;
     trace_header_t header;
     RisuOp op;
 
@@ -85,18 +85,18 @@ int recv_and_compare_register_info(read_fn read_fn,
     op = get_risuop(&master_ri);
 
     if (read_fn(&header, sizeof(header)) != 0) {
-        return -1;
+        return RES_BAD_IO;
     }
 
     if (header.risu_op != op) {
         /* We are out of sync */
-        resp = 2;
+        resp = RES_BAD_IO;
         resp_fn(resp);
         return resp;
     }
 
     /* send OK for the header */
-    resp_fn(0);
+    resp_fn(RES_OK);
 
     switch (op) {
     case OP_COMPARE:
@@ -107,12 +107,12 @@ int recv_and_compare_register_info(read_fn read_fn,
          */
         if (read_fn(&apprentice_ri, reginfo_size())) {
             packet_mismatch = 1;
-            resp = 2;
+            resp = RES_BAD_IO;
         } else if (!reginfo_is_eq(&master_ri, &apprentice_ri)) {
             /* register mismatch */
-            resp = 2;
+            resp = RES_MISMATCH;
         } else if (op == OP_TESTEND) {
-            resp = 1;
+            resp = RES_END;
         }
         resp_fn(resp);
         break;
@@ -127,10 +127,10 @@ int recv_and_compare_register_info(read_fn read_fn,
         mem_used = 1;
         if (read_fn(apprentice_memblock, MEMBLOCKLEN)) {
             packet_mismatch = 1;
-            resp = 2;
+            resp = RES_BAD_IO;
         } else if (memcmp(memblock, apprentice_memblock, MEMBLOCKLEN) != 0) {
             /* memory mismatch */
-            resp = 2;
+            resp = RES_MISMATCH;
         }
         resp_fn(resp);
         break;

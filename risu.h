@@ -57,6 +57,14 @@ typedef enum {
     OP_COMPAREMEM = 4,
 } RisuOp;
 
+/* Result of operation */
+typedef enum {
+    RES_OK = 0,
+    RES_END,
+    RES_MISMATCH,
+    RES_BAD_IO,
+} RisuResult;
+
 /* The memory block should be this long */
 #define MEMBLOCKLEN 8192
 
@@ -82,20 +90,21 @@ typedef struct {
  */
 typedef int (*write_fn) (void *ptr, size_t bytes);
 typedef int (*read_fn) (void *ptr, size_t bytes);
-typedef void (*respond_fn) (int response);
+typedef void (*respond_fn) (RisuResult response);
 
-/* Send the register information from the struct ucontext down the socket.
- * Return the response code from the master.
+/*
+ * Send the register information from the struct ucontext down the socket.
  * NB: called from a signal handler.
  */
-int send_register_info(write_fn write_fn, void *uc);
+RisuResult send_register_info(write_fn write_fn, void *uc);
 
-/* Read register info from the socket and compare it with that from the
- * ucontext. Return 0 for match, 1 for end-of-test, 2 for mismatch.
+/*
+ * Read register info from the socket and compare it with that from the
+ * ucontext.
  * NB: called from a signal handler.
  */
-int recv_and_compare_register_info(read_fn read_fn,
-                                   respond_fn respond, void *uc);
+RisuResult recv_and_compare_register_info(read_fn read_fn,
+                                          respond_fn respond, void *uc);
 
 /* Print a useful report on the status of the last comparison
  * done in recv_and_compare_register_info(). This is called on
