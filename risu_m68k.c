@@ -25,13 +25,13 @@ uint64_t get_reginfo_paramreg(struct reginfo *ri)
     return ri->gregs[R_A0];
 }
 
-int get_risuop(struct reginfo *ri)
+RisuOp get_risuop(struct reginfo *ri)
 {
     uint32_t insn = ri->faulting_insn;
     uint32_t op = insn & 0xf;
     uint32_t key = insn & ~0xf;
     uint32_t risukey = 0x4afc7000;
-    return (key != risukey) ? -1 : op;
+    return (key != risukey) ? OP_SIGILL : op;
 }
 
 uintptr_t get_pc(struct reginfo *ri)
