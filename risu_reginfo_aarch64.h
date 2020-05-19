@@ -17,19 +17,7 @@
 
 struct simd_reginfo {
     __uint128_t vregs[32];
-    char end[0];
 };
-
-#ifdef SVE_MAGIC
-struct sve_reginfo {
-    /* SVE */
-    uint16_t    vl; /* current VL */
-    __uint128_t zregs[SVE_NUM_ZREGS][SVE_VQ_MAX];
-    uint16_t    pregs[SVE_NUM_PREGS][SVE_VQ_MAX];
-    uint16_t    ffr[SVE_VQ_MAX];
-    char end[0];
-};
-#endif
 
 /* The kernel headers set this based on future arch extensions.
    The current arch maximum is 16.  Save space below.  */
@@ -47,11 +35,13 @@ struct reginfo {
     /* FP/SIMD */
     uint32_t fpsr;
     uint32_t fpcr;
+    uint32_t sve_vl;
 
     union {
         struct simd_reginfo simd;
 #ifdef SVE_MAGIC
-        struct sve_reginfo sve;
+        char sve[SVE_SIG_CONTEXT_SIZE(16) - SVE_SIG_REGS_OFFSET]
+            __attribute__((aligned(16)));
 #endif
     };
 };
