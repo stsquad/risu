@@ -233,6 +233,12 @@ static int apprentice(void)
         fprintf(stderr, "mismatch mem after %zd checkpoints\n", signal_count);
         return EXIT_FAILURE;
 
+    case RES_MISMATCH_HEAD:
+        fprintf(stderr, "mismatch header after %zd checkpoints\n",
+                signal_count);
+        report_mismatch_header();
+        return EXIT_FAILURE;
+
     case RES_BAD_IO:
         fprintf(stderr, "i/o error after %zd checkpoints\n", signal_count);
         return EXIT_FAILURE;

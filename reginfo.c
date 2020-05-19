@@ -16,6 +16,7 @@
 
 static struct reginfo master_ri, apprentice_ri;
 static uint8_t master_memblock[MEMBLOCKLEN];
+static trace_header_t master_header;
 
 RisuResult send_register_info(void *uc)
 {
@@ -23,32 +24,57 @@ RisuResult send_register_info(void *uc)
     trace_header_t header;
     RisuResult res;
     RisuOp op;
+    void *extra;
 
     reginfo_init(&ri, uc);
     op = get_risuop(&ri);
 
     /* Write a header with PC/op to keep in sync */
+    header.magic = RISU_MAGIC;
     header.pc = get_pc(&ri);
     header.risu_op = op;
+
+    switch (op) {
+    case OP_TESTEND:
+    case OP_COMPARE:
+    case OP_SIGILL:
+        header.size = reginfo_size();
+        extra = &ri;
+        break;
+
+    case OP_SETMEMBLOCK:
+    case OP_GETMEMBLOCK:
+        header.size = 0;
+        extra = NULL;
+        break;
+
+    case OP_COMPAREMEM:
+        header.size = MEMBLOCKLEN;
+        extra = memblock;
+        break;
+
+    default:
+        abort();
+    }
+
     res = write_buffer(&header, sizeof(header));
     if (res != RES_OK) {
         return res;
     }
+    if (extra) {
+        res = write_buffer(extra, header.size);
+        if (res != RES_OK) {
+            return res;
+        }
+    }
 
     switch (op) {
     case OP_COMPARE:
-    case OP_TESTEND:
     case OP_SIGILL:
-        /*
-         * Do a simple register compare on (a) explicit request
-         * (b) end of test (c) a non-risuop UNDEF
-         */
-        res = write_buffer(&ri, reginfo_size());
-        /* For OP_TEST_END, force exit. */
-        if (res == RES_OK && op == OP_TESTEND) {
-            res = RES_END;
-        }
+    case OP_COMPAREMEM:
         break;
+    case OP_TESTEND:
+        return RES_END;
     case OP_SETMEMBLOCK:
         memblock = (void *)(uintptr_t)get_reginfo_paramreg(&ri);
         break;
@@ -56,12 +82,10 @@ RisuResult send_register_info(void *uc)
         set_ucontext_paramreg(uc,
                               get_reginfo_paramreg(&ri) + (uintptr_t)memblock);
         break;
-    case OP_COMPAREMEM:
-        return write_buffer(memblock, MEMBLOCKLEN);
     default:
         abort();
     }
-    return res;
+    return RES_OK;
 }
 
 /* Read register info from the socket and compare it with that from the
@@ -75,34 +99,48 @@ RisuResult send_register_info(void *uc)
 RisuResult recv_and_compare_register_info(void *uc)
 {
     RisuResult res;
-    trace_header_t header;
+    size_t extra_size;
     RisuOp op;
 
     reginfo_init(&apprentice_ri, uc);
     op = get_risuop(&apprentice_ri);
 
-    res = read_buffer(&header, sizeof(header));
-    if (res != RES_OK) {
-        return res;
+    switch (op) {
+    case OP_TESTEND:
+    case OP_COMPARE:
+    case OP_SIGILL:
+        extra_size = reginfo_size();
+        break;
+    case OP_SETMEMBLOCK:
+    case OP_GETMEMBLOCK:
+        extra_size = 0;
+        break;
+    case OP_COMPAREMEM:
+        extra_size = MEMBLOCKLEN;
+        break;
+    default:
+        abort();
     }
 
-    if (header.risu_op != op) {
-        /* We are out of sync.  Tell master to exit. */
-        respond(RES_END);
-        return RES_BAD_IO;
+    res = read_buffer(&master_header, sizeof(master_header));
+    if (res != RES_OK) {
+        goto fail_header;
+    }
+    if (master_header.magic != RISU_MAGIC ||
+        master_header.risu_op != op ||
+        master_header.size != extra_size) {
+        res = RES_MISMATCH_HEAD;
+        goto fail_header;
     }
 
     /* send OK for the header */
     respond(RES_OK);
 
     switch (op) {
-    case OP_COMPARE:
     case OP_TESTEND:
+    case OP_COMPARE:
     case OP_SIGILL:
-        /* Do a simple register compare on (a) explicit request
-         * (b) end of test (c) a non-risuop UNDEF
-         */
-        res = read_buffer(&master_ri, reginfo_size());
+        res = read_buffer(&master_ri, extra_size);
         if (res != RES_OK) {
             /* fail */
         } else if (!reginfo_is_eq(&master_ri, &apprentice_ri)) {
@@ -111,15 +149,17 @@ RisuResult recv_and_compare_register_info(void *uc)
         } else if (op == OP_TESTEND) {
             res = RES_END;
         }
-        respond(res == RES_OK ? RES_OK : RES_END);
         break;
+
     case OP_SETMEMBLOCK:
         memblock = (void *)(uintptr_t)get_reginfo_paramreg(&apprentice_ri);
-        break;
+        return RES_OK;
+
     case OP_GETMEMBLOCK:
         set_ucontext_paramreg(uc, get_reginfo_paramreg(&apprentice_ri) +
                               (uintptr_t)memblock);
-        break;
+        return RES_OK;
+
     case OP_COMPAREMEM:
         res = read_buffer(master_memblock, MEMBLOCKLEN);
         if (res != RES_OK) {
@@ -128,12 +168,14 @@ RisuResult recv_and_compare_register_info(void *uc)
             /* memory mismatch */
             res = RES_MISMATCH_MEM;
         }
-        respond(res == RES_OK ? RES_OK : RES_END);
         break;
+
     default:
         abort();
     }
 
+ fail_header:
+    respond(res == RES_OK ? RES_OK : RES_END);
     return res;
 }
 
@@ -148,4 +190,62 @@ void report_mismatch_reg(void)
     fprintf(stderr, "apprentice reginfo:\n");
     reginfo_dump(&apprentice_ri, stderr);
     reginfo_dump_mismatch(&master_ri, &apprentice_ri, stderr);
+}
+
+void report_mismatch_header(void)
+{
+    fprintf(stderr, "header mismatch detail (master : apprentice):\n");
+    if (master_header.magic != RISU_MAGIC) {
+        fprintf(stderr, "  magic: %08x vs %08x\n",
+                master_header.magic, RISU_MAGIC);
+        /* If the magic number is wrong, everything else is garbage too. */
+        return;
+    }
+
+    RisuOp a_op = get_risuop(&apprentice_ri);
+    RisuOp m_op = master_header.risu_op;
+    if (a_op != m_op) {
+        fprintf(stderr, "  op   : %d != %d\n", m_op, a_op);
+        /* If the opcode is mismatched, we can't compute size. */
+    } else {
+        const char *kind;
+        size_t m_sz = master_header.size;
+        size_t a_sz;
+
+        switch (a_op) {
+        case OP_TESTEND:
+        case OP_COMPARE:
+        case OP_SIGILL:
+            kind = "reginfo";
+            a_sz = reginfo_size();
+            break;
+        case OP_SETMEMBLOCK:
+        case OP_GETMEMBLOCK:
+            kind = "unexpected";
+            a_sz = 0;
+            break;
+        case OP_COMPAREMEM:
+            kind = "memblock";
+            a_sz = MEMBLOCKLEN;
+            break;
+        default:
+            abort();
+        }
+        if (a_sz != m_sz) {
+            fprintf(stderr, " size : %zd != %zd (%s)\n",
+                    m_sz, a_sz, kind);
+        } else {
+            /* If magic, op, and size are the same, how did we get here? */
+            abort();
+        }
+    }
+
+    uint64_t a_pc = get_pc(&apprentice_ri);
+    uint64_t m_pc = master_header.pc;
+    if (a_pc != m_pc) {
+        fprintf(stderr, "  pc   : %016" PRIx64 " vs %016" PRIx64 "\n",
+                m_pc, a_pc);
+    } else {
+        fprintf(stderr, "  pc   : %016" PRIx64 "\n", a_pc);
+    }
 }

@@ -56,6 +56,7 @@ typedef enum {
     RES_END,
     RES_MISMATCH_REG,
     RES_MISMATCH_MEM,
+    RES_MISMATCH_HEAD,
     RES_BAD_IO,
 } RisuResult;
 
@@ -70,9 +71,13 @@ typedef enum {
 struct reginfo;
 
 typedef struct {
-   uintptr_t pc;
+   uint32_t magic;
+   uint32_t size;
    uint32_t risu_op;
+   uintptr_t pc;
 } trace_header_t;
+
+#define RISU_MAGIC  (('R' << 24) | ('i' << 16) | ('S' << 8) | 'u')
 
 /* Socket related routines */
 int master_connect(int port);
@@ -111,6 +116,7 @@ RisuResult recv_and_compare_register_info(void *uc);
  * done in recv_and_compare_register_info().
  */
 void report_mismatch_reg(void);
+void report_mismatch_header(void);
 
 /* Interface provided by CPU-specific code: */
 
