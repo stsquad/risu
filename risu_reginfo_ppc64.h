@@ -20,7 +20,8 @@ struct reginfo {
     uint64_t nip;
     uint64_t prev_addr;
     gregset_t gregs;
-    fpregset_t fpregs;
+    uint64_t fpregs[32];
+    uint64_t fpscr;
     vrregset_t vrregs;
 };
 

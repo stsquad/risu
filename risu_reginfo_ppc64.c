@@ -45,6 +45,7 @@ int reginfo_size(struct reginfo *ri)
 void reginfo_init(struct reginfo *ri, ucontext_t *uc)
 {
     int i;
+
     memset(ri, 0, sizeof(*ri));
 
     ri->faulting_insn = *((uint32_t *) uc->uc_mcontext.regs->nip);
@@ -54,16 +55,11 @@ void reginfo_init(struct reginfo *ri, ucontext_t *uc)
         ri->gregs[i] = uc->uc_mcontext.gp_regs[i];
     }
 
-    for (i = 0; i < NFPREG; i++) {
-        ri->fpregs[i] = uc->uc_mcontext.fp_regs[i];
-    }
+    memcpy(ri->fpregs, uc->uc_mcontext.fp_regs, 32 * sizeof(double));
+    ri->fpscr = uc->uc_mcontext.fp_regs[32];
 
-    for (i = 0; i < 32; i++) {
-        ri->vrregs.vrregs[i][0] = uc->uc_mcontext.v_regs->vrregs[i][0];
-        ri->vrregs.vrregs[i][1] = uc->uc_mcontext.v_regs->vrregs[i][1];
-        ri->vrregs.vrregs[i][2] = uc->uc_mcontext.v_regs->vrregs[i][2];
-        ri->vrregs.vrregs[i][3] = uc->uc_mcontext.v_regs->vrregs[i][3];
-    }
+    memcpy(ri->vrregs.vrregs, uc->uc_mcontext.v_regs->vrregs,
+           sizeof(ri->vrregs.vrregs[0]) * 32);
     ri->vrregs.vscr = uc->uc_mcontext.v_regs->vscr;
     ri->vrregs.vrsave = uc->uc_mcontext.v_regs->vrsave;
 }
@@ -91,10 +87,6 @@ int reginfo_is_eq(struct reginfo *m, struct reginfo *a)
     }
 
     for (i = 0; i < 32; i++) {
-        if (isnan(m->fpregs[i]) && isnan(a->fpregs[i])) {
-            continue;
-        }
-
         if (m->fpregs[i] != a->fpregs[i]) {
             return 0;
         }
@@ -141,10 +133,10 @@ int reginfo_dump(struct reginfo *ri, FILE * f)
     fprintf(f, "\tdscr   : %16lx\n\n", ri->gregs[44]);
 
     for (i = 0; i < 16; i++) {
-        fprintf(f, "\tf%2d: %.4f\tf%2d: %.4f\n", i, ri->fpregs[i],
+        fprintf(f, "\tf%2d: %016lx\tf%2d: %016lx\n", i, ri->fpregs[i],
                 i + 16, ri->fpregs[i + 16]);
     }
-    fprintf(f, "\tfpscr: %f\n\n", ri->fpregs[32]);
+    fprintf(f, "\tfpscr: %016lx\n\n", ri->fpscr);
 
     for (i = 0; i < 32; i++) {
         fprintf(f, "vr%02d: %8x, %8x, %8x, %8x\n", i,
@@ -181,13 +173,10 @@ int reginfo_dump_mismatch(struct reginfo *m, struct reginfo *a, FILE *f)
     }
 
     for (i = 0; i < 32; i++) {
-        if (isnan(m->fpregs[i]) && isnan(a->fpregs[i])) {
-            continue;
-        }
-
         if (m->fpregs[i] != a->fpregs[i]) {
             fprintf(f, "Mismatch: Register f%d\n", i);
-            fprintf(f, "m: [%f] != a: [%f]\n", m->fpregs[i], a->fpregs[i]);
+            fprintf(f, "m: [%016lx] != a: [%016lx]\n",
+                    m->fpregs[i], a->fpregs[i]);
         }
     }
 
