@@ -34,13 +34,6 @@ void process_arch_opt(int opt, const char *arg);
 
 #include REGINFO_HEADER(ARCH)
 
-/* Socket related routines */
-int master_connect(int port);
-int apprentice_connect(const char *hostname, int port);
-int send_data_pkt(int sock, void *pkt, int pktlen);
-int recv_data_pkt(int sock, void *pkt, int pktlen);
-void send_response_byte(int sock, int resp);
-
 extern uintptr_t image_start_address;
 extern void *memblock;
 
@@ -80,31 +73,32 @@ typedef struct {
    uint32_t risu_op;
 } trace_header_t;
 
+/* Socket related routines */
+int master_connect(int port);
+int apprentice_connect(const char *hostname, int port);
+RisuResult send_data_pkt(int sock, void *pkt, int pktlen);
+RisuResult recv_data_pkt(int sock, void *pkt, int pktlen);
+void send_response_byte(int sock, int resp);
+
 /* Functions operating on reginfo */
 
-/* Function prototypes for read/write helper functions.
- *
- * We pass the helper function to send_register_info and
- * recv_and_compare_register_info which can either be backed by the
- * traditional network socket or a trace file.
- */
-typedef int (*write_fn) (void *ptr, size_t bytes);
-typedef int (*read_fn) (void *ptr, size_t bytes);
-typedef void (*respond_fn) (RisuResult response);
+/* Function prototypes for read/write helper functions. */
+RisuResult write_buffer(void *ptr, size_t bytes);
+RisuResult read_buffer(void *ptr, size_t bytes);
+void respond(RisuResult response);
 
 /*
  * Send the register information from the struct ucontext down the socket.
  * NB: called from a signal handler.
  */
-RisuResult send_register_info(write_fn write_fn, void *uc);
+RisuResult send_register_info(void *uc);
 
 /*
  * Read register info from the socket and compare it with that from the
  * ucontext.
  * NB: called from a signal handler.
  */
-RisuResult recv_and_compare_register_info(read_fn read_fn,
-                                          respond_fn respond, void *uc);
+RisuResult recv_and_compare_register_info(void *uc);
 
 /* Print a useful report on the status of the last comparison
  * done in recv_and_compare_register_info(). This is called on

@@ -168,7 +168,7 @@ ssize_t safe_writev(int fd, struct iovec *iov_in, int iovcnt)
  * Note that both ends must agree on the length of the
  * block of data.
  */
-int send_data_pkt(int sock, void *pkt, int pktlen)
+RisuResult send_data_pkt(int sock, void *pkt, int pktlen)
 {
     unsigned char resp;
     /* First we send the packet length as a network-order 32 bit value.
@@ -196,7 +196,7 @@ int send_data_pkt(int sock, void *pkt, int pktlen)
     return resp;
 }
 
-int recv_data_pkt(int sock, void *pkt, int pktlen)
+RisuResult recv_data_pkt(int sock, void *pkt, int pktlen)
 {
     uint32_t net_pktlen;
     recv_bytes(sock, &net_pktlen, sizeof(net_pktlen));
@@ -206,10 +206,10 @@ int recv_data_pkt(int sock, void *pkt, int pktlen)
          * a response back.
          */
         recv_and_discard_bytes(sock, net_pktlen);
-        return 1;
+        return RES_BAD_IO;
     }
     recv_bytes(sock, pkt, pktlen);
-    return 0;
+    return RES_OK;
 }
 
 void send_response_byte(int sock, int resp)
