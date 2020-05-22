@@ -161,8 +161,8 @@ int reginfo_is_eq(struct reginfo *r1, struct reginfo *r2)
     return memcmp(r1, r2, sizeof(*r1)) == 0;    /* ok since we memset 0 */
 }
 
-/* reginfo_dump: print the state to a stream, returns nonzero on success */
-int reginfo_dump(struct reginfo *ri, FILE *f)
+/* reginfo_dump: print the state to a stream */
+void reginfo_dump(struct reginfo *ri, FILE *f)
 {
     int i;
     if (ri->faulting_insn_size == 2) {
@@ -179,8 +179,6 @@ int reginfo_dump(struct reginfo *ri, FILE *f)
                 i, (unsigned long long) ri->fpregs[i]);
     }
     fprintf(f, "  fpscr: %08x\n", ri->fpscr);
-
-    return !ferror(f);
 }
 
 void reginfo_dump_mismatch(struct reginfo *m, struct reginfo *a, FILE *f)

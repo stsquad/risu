@@ -92,8 +92,8 @@ int reginfo_is_eq(struct reginfo *m, struct reginfo *a)
     return 1;
 }
 
-/* reginfo_dump: print state to a stream, returns nonzero on success */
-int reginfo_dump(struct reginfo *ri, FILE *f)
+/* reginfo_dump: print state to a stream */
+void reginfo_dump(struct reginfo *ri, FILE *f)
 {
     int i;
     fprintf(f, "  pc            \e[1;101;37m0x%08x\e[0m\n", ri->pc);
@@ -114,8 +114,6 @@ int reginfo_dump(struct reginfo *ri, FILE *f)
     }
 
     fprintf(f, "\n");
-
-    return !ferror(f);
 }
 
 void reginfo_dump_mismatch(struct reginfo *m, struct reginfo *a, FILE *f)

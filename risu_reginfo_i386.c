@@ -310,8 +310,8 @@ static char get_vecletter(uint64_t features)
     }
 }
 
-/* reginfo_dump: print state to a stream, returns nonzero on success */
-int reginfo_dump(struct reginfo *ri, FILE *f)
+/* reginfo_dump: print state to a stream */
+void reginfo_dump(struct reginfo *ri, FILE *f)
 {
     uint64_t features;
     int i, j, n, w;
@@ -345,8 +345,6 @@ int reginfo_dump(struct reginfo *ri, FILE *f)
             fprintf(f, "  k%-5d: %016" PRIx64 "\n", i, ri->kregs[i]);
         }
     }
-
-    return !ferror(f);
 }
 
 void reginfo_dump_mismatch(struct reginfo *m, struct reginfo *a, FILE *f)

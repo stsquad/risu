@@ -258,8 +258,8 @@ static void sve_dump_zreg_diff(FILE *f, int vq, const uint64_t *za,
 }
 #endif
 
-/* reginfo_dump: print state to a stream, returns nonzero on success */
-int reginfo_dump(struct reginfo *ri, FILE * f)
+/* reginfo_dump: print state to a stream */
+void reginfo_dump(struct reginfo *ri, FILE * f)
 {
     int i;
     fprintf(f, "  faulting insn %08x\n", ri->faulting_insn);
@@ -303,7 +303,7 @@ int reginfo_dump(struct reginfo *ri, FILE * f)
             sve_dump_preg(f, vq, p);
             fprintf(f, "\n");
         }
-        return !ferror(f);
+        return;
     }
 #endif
 
@@ -312,8 +312,6 @@ int reginfo_dump(struct reginfo *ri, FILE * f)
                 (uint64_t) (ri->simd.vregs[i] >> 64),
                 (uint64_t) (ri->simd.vregs[i]));
     }
-
-    return !ferror(f);
 }
 
 void reginfo_dump_mismatch(struct reginfo *m, struct reginfo *a, FILE * f)
