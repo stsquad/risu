@@ -35,7 +35,6 @@ void process_arch_opt(int opt, const char *arg);
 #include REGINFO_HEADER(ARCH)
 
 extern uintptr_t image_start_address;
-extern void *memblock;
 
 /* Ops code under test can request from risu: */
 typedef enum {
@@ -83,34 +82,9 @@ void send_response_byte(int sock, int resp);
 
 /* Functions operating on reginfo */
 
-/* Function prototypes for read/write helper functions. */
-RisuResult write_buffer(void *ptr, size_t bytes);
-RisuResult read_buffer(void *ptr, size_t bytes);
-void respond(RisuResult response);
-
-/*
- * Send the register information from the struct ucontext down the socket.
- * NB: called from a signal handler.
- */
-RisuResult send_register_info(void *uc);
-
-/*
- * Read register info from the socket and compare it with that from the
- * ucontext.
- * NB: called from a signal handler.
- */
-RisuResult recv_and_compare_register_info(void *uc);
-
-/*
- * Print a useful report on the status of the last reg comparison
- * done in recv_and_compare_register_info().
- */
-void report_mismatch_reg(void);
-
 /* Interface provided by CPU-specific code: */
 
-/* Move the PC past this faulting insn by adjusting ucontext
- */
+/* Move the PC past this faulting insn by adjusting ucontext. */
 void advance_pc(void *uc);
 
 /* Set the parameter register in a ucontext_t to the specified value.
