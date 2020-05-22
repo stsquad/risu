@@ -118,13 +118,12 @@ int reginfo_dump(struct reginfo *ri, FILE *f)
     return !ferror(f);
 }
 
-int reginfo_dump_mismatch(struct reginfo *m, struct reginfo *a, FILE * f)
+void reginfo_dump_mismatch(struct reginfo *m, struct reginfo *a, FILE *f)
 {
     int i;
 
     if (m->gregs[R_PS] != a->gregs[R_PS]) {
-        fprintf(f, "Mismatch: Register PS\n");
-        fprintf(f, "master: [%x] - apprentice: [%x]\n",
+        fprintf(f, "    PS: %08x vs %08x\n",
                 m->gregs[R_PS], a->gregs[R_PS]);
     }
 
@@ -133,22 +132,18 @@ int reginfo_dump_mismatch(struct reginfo *m, struct reginfo *a, FILE * f)
             continue;
         }
         if (m->gregs[i] != a->gregs[i]) {
-            fprintf(f, "Mismatch: Register %c%d\n", i < 8 ? 'D' : 'A',
-                    i % 8);
-            fprintf(f, "master: [%x] - apprentice: [%x]\n", m->gregs[i],
-                    a->gregs[i]);
+            fprintf(f, "    %c%d: %08x vs %08x\n",
+                    i < 8 ? 'D' : 'A', i % 8, m->gregs[i], a->gregs[i]);
         }
     }
 
     if (m->fpregs.f_pcr != a->fpregs.f_pcr) {
-        fprintf(f, "Mismatch: Register FPCR\n");
-        fprintf(f, "m: [%04x] != a: [%04x]\n",
+        fprintf(f, "  FPCR: %04x vs %04x\n",
                 m->fpregs.f_pcr, a->fpregs.f_pcr);
     }
 
     if (m->fpregs.f_psr != a->fpregs.f_psr) {
-        fprintf(f, "Mismatch: Register FPSR\n");
-        fprintf(f, "m: [%08x] != a: [%08x]\n",
+        fprintf(f, "  FPSR: %04x vs %04x\n",
                 m->fpregs.f_psr, a->fpregs.f_psr);
     }
 
@@ -156,14 +151,10 @@ int reginfo_dump_mismatch(struct reginfo *m, struct reginfo *a, FILE * f)
         if (m->fpregs.f_fpregs[i][0] != a->fpregs.f_fpregs[i][0] ||
             m->fpregs.f_fpregs[i][1] != a->fpregs.f_fpregs[i][1] ||
             m->fpregs.f_fpregs[i][2] != a->fpregs.f_fpregs[i][2]) {
-            fprintf(f, "Mismatch: Register FP%d\n", i);
-            fprintf(f, "m: [%08x %08x %08x] != a: [%08x %08x %08x]\n",
+            fprintf(f, "   FP%d: %08x%08x%08x vs %08x%08x%08x\n", i,
                     m->fpregs.f_fpregs[i][0], m->fpregs.f_fpregs[i][1],
                     m->fpregs.f_fpregs[i][2], a->fpregs.f_fpregs[i][0],
                     a->fpregs.f_fpregs[i][1], a->fpregs.f_fpregs[i][2]);
         }
     }
-
-
-    return !ferror(f);
 }

@@ -183,32 +183,33 @@ int reginfo_dump(struct reginfo *ri, FILE *f)
     return !ferror(f);
 }
 
-int reginfo_dump_mismatch(struct reginfo *m, struct reginfo *a, FILE *f)
+void reginfo_dump_mismatch(struct reginfo *m, struct reginfo *a, FILE *f)
 {
     int i;
-    fprintf(f, "mismatch detail (master : apprentice):\n");
 
     if (m->faulting_insn_size != a->faulting_insn_size) {
-        fprintf(f, "  faulting insn size mismatch %d vs %d\n",
+        fprintf(f, "  faulting insn size: %d vs %d\n",
                 m->faulting_insn_size, a->faulting_insn_size);
     } else if (m->faulting_insn != a->faulting_insn) {
         if (m->faulting_insn_size == 2) {
-            fprintf(f, "  faulting insn mismatch %04x vs %04x\n",
+            fprintf(f, "  faulting insn: %04x vs %04x\n",
                     m->faulting_insn, a->faulting_insn);
         } else {
-            fprintf(f, "  faulting insn mismatch %08x vs %08x\n",
+            fprintf(f, "  faulting insn: %08x vs %08x\n",
                     m->faulting_insn, a->faulting_insn);
         }
     }
+
     for (i = 0; i < 16; i++) {
         if (m->gpreg[i] != a->gpreg[i]) {
-            fprintf(f, "  r%d: %08x vs %08x\n", i, m->gpreg[i],
-                    a->gpreg[i]);
+            fprintf(f, "  r%d: %08x vs %08x\n", i, m->gpreg[i], a->gpreg[i]);
         }
     }
+
     if (m->cpsr != a->cpsr) {
         fprintf(f, "  cpsr: %08x vs %08x\n", m->cpsr, a->cpsr);
     }
+
     for (i = 0; i < 32; i++) {
         if (m->fpregs[i] != a->fpregs[i]) {
             fprintf(f, "  d%d: %016llx vs %016llx\n", i,
@@ -216,9 +217,8 @@ int reginfo_dump_mismatch(struct reginfo *m, struct reginfo *a, FILE *f)
                     (unsigned long long) a->fpregs[i]);
         }
     }
+
     if (m->fpscr != a->fpscr) {
         fprintf(f, "  fpscr: %08x vs %08x\n", m->fpscr, a->fpscr);
     }
-
-    return !ferror(f);
 }

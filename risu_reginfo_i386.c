@@ -349,13 +349,11 @@ int reginfo_dump(struct reginfo *ri, FILE *f)
     return !ferror(f);
 }
 
-int reginfo_dump_mismatch(struct reginfo *m, struct reginfo *a, FILE *f)
+void reginfo_dump_mismatch(struct reginfo *m, struct reginfo *a, FILE *f)
 {
     int i, j, n, w;
     uint64_t features;
     char r;
-
-    fprintf(f, "Mismatch (master v apprentice):\n");
 
     for (i = 0; i < NGREG; i++) {
         if (m->gregs[i] != a->gregs[i]) {
@@ -399,6 +397,4 @@ int reginfo_dump_mismatch(struct reginfo *m, struct reginfo *a, FILE *f)
                     i, m->kregs[i], a->kregs[i]);
         }
     }
-
-    return !ferror(f);
 }

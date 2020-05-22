@@ -449,6 +449,7 @@ static int apprentice(void)
         reginfo_dump(&ri[MASTER], stderr);
         fprintf(stderr, "apprentice reginfo:\n");
         reginfo_dump(&ri[APPRENTICE], stderr);
+        fprintf(stderr, "mismatch detail (master : apprentice):\n");
         reginfo_dump_mismatch(&ri[MASTER], &ri[APPRENTICE], stderr);
         return EXIT_FAILURE;
 
