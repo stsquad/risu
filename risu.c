@@ -166,6 +166,34 @@ static void master_sigill(int sig, siginfo_t *si, void *uc)
     }
 }
 
+static RisuResult recv_register_info(struct reginfo *ri)
+{
+    RisuResult res;
+
+    res = read_buffer(&header, sizeof(header));
+    if (res != RES_OK) {
+        return res;
+    }
+
+    /* send OK for the header */
+    respond(RES_OK);
+
+    switch (header.risu_op) {
+    case OP_COMPARE:
+    case OP_TESTEND:
+    case OP_SIGILL:
+        return read_buffer(ri, reginfo_size());
+    case OP_COMPAREMEM:
+        return read_buffer(other_memblock, MEMBLOCKLEN);
+    case OP_SETMEMBLOCK:
+    case OP_GETMEMBLOCK:
+        return RES_OK;
+    default:
+        /* TODO: Create a better error message. */
+        return RES_BAD_IO;
+    }
+}
+
 static RisuResult recv_and_compare_register_info(void *uc)
 {
     uint64_t paramreg;
@@ -173,33 +201,26 @@ static RisuResult recv_and_compare_register_info(void *uc)
     RisuOp op;
 
     reginfo_init(&ri[APPRENTICE], uc);
-    op = get_risuop(&ri[APPRENTICE]);
 
-    res = read_buffer(&header, sizeof(header));
+    res = recv_register_info(&ri[MASTER]);
     if (res != RES_OK) {
+        /* I/O error.  Tell master to exit. */
+        respond(RES_END);
         return res;
     }
 
+    op = get_risuop(&ri[APPRENTICE]);
     if (header.risu_op != op) {
         /* We are out of sync.  Tell master to exit. */
         respond(RES_END);
         return RES_BAD_IO;
     }
 
-    /* send OK for the header */
-    respond(RES_OK);
-
     switch (op) {
     case OP_COMPARE:
     case OP_TESTEND:
     case OP_SIGILL:
-        /* Do a simple register compare on (a) explicit request
-         * (b) end of test (c) a non-risuop UNDEF
-         */
-        res = read_buffer(&ri[MASTER], reginfo_size());
-        if (res != RES_OK) {
-            /* fail */
-        } else if (!reginfo_is_eq(&ri[MASTER], &ri[APPRENTICE])) {
+        if (!reginfo_is_eq(&ri[MASTER], &ri[APPRENTICE])) {
             /* register mismatch */
             res = RES_MISMATCH_REG;
         } else if (op == OP_TESTEND) {
@@ -216,10 +237,7 @@ static RisuResult recv_and_compare_register_info(void *uc)
         set_ucontext_paramreg(uc, paramreg + (uintptr_t)memblock);
         break;
     case OP_COMPAREMEM:
-        res = read_buffer(other_memblock, MEMBLOCKLEN);
-        if (res != RES_OK) {
-            /* fail */
-        } else if (memcmp(memblock, other_memblock, MEMBLOCKLEN) != 0) {
+        if (memcmp(memblock, other_memblock, MEMBLOCKLEN) != 0) {
             /* memory mismatch */
             res = RES_MISMATCH_MEM;
         }
