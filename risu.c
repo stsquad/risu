@@ -125,7 +125,7 @@ static RisuResult send_register_info(void *uc)
     case OP_TESTEND:
     case OP_COMPARE:
     case OP_SIGILL:
-        header.size = reginfo_size();
+        header.size = reginfo_size(&ri[MASTER]);
         extra = &ri[MASTER];
         break;
     case OP_COMPAREMEM:
@@ -209,7 +209,12 @@ static RisuResult recv_register_info(struct reginfo *ri)
             return RES_BAD_SIZE;
         }
         respond(RES_OK);
-        return read_buffer(ri, header.size);
+        res = read_buffer(ri, header.size);
+        if (res == RES_OK && header.size != reginfo_size(ri)) {
+            /* The payload size is not self-consistent with the data. */
+            return RES_BAD_SIZE;
+        }
+        return res;
 
     case OP_COMPAREMEM:
         if (header.size != MEMBLOCKLEN) {

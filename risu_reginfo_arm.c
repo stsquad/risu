@@ -36,9 +36,9 @@ void process_arch_opt(int opt, const char *arg)
     abort();
 }
 
-const int reginfo_size(void)
+int reginfo_size(struct reginfo *ri)
 {
-    return sizeof(struct reginfo);
+    return sizeof(*ri);
 }
 
 static void reginfo_init_vfp(struct reginfo *ri, ucontext_t *uc)
