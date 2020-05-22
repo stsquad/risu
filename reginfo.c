@@ -11,7 +11,7 @@
 
 #include <stdio.h>
 #include <string.h>
-
+#include <stdlib.h>
 #include "risu.h"
 
 struct reginfo master_ri, apprentice_ri;
@@ -25,7 +25,7 @@ int send_register_info(write_fn write_fn, void *uc)
 {
     struct reginfo ri;
     trace_header_t header;
-    int op;
+    RisuOp op;
 
     reginfo_init(&ri, uc);
     op = get_risuop(&ri);
@@ -38,11 +38,18 @@ int send_register_info(write_fn write_fn, void *uc)
     }
 
     switch (op) {
+    case OP_COMPARE:
     case OP_TESTEND:
-        write_fn(&ri, reginfo_size());
-        /* if we are tracing write_fn will return 0 unlike a remote
-           end, hence we force return of 1 here */
-        return 1;
+    case OP_SIGILL:
+        /*
+         * Do a simple register compare on (a) explicit request
+         * (b) end of test (c) a non-risuop UNDEF
+         */
+        if (write_fn(&ri, reginfo_size()) != 0) {
+            return -1;
+        }
+        /* For OP_TEST_END, force return 1 to exit. */
+        return op == OP_TESTEND;
     case OP_SETMEMBLOCK:
         memblock = (void *)(uintptr_t)get_reginfo_paramreg(&ri);
         break;
@@ -53,12 +60,8 @@ int send_register_info(write_fn write_fn, void *uc)
     case OP_COMPAREMEM:
         return write_fn(memblock, MEMBLOCKLEN);
         break;
-    case OP_COMPARE:
     default:
-        /* Do a simple register compare on (a) explicit request
-         * (b) end of test (c) a non-risuop UNDEF
-         */
-        return write_fn(&ri, reginfo_size());
+        abort();
     }
     return 0;
 }
@@ -74,8 +77,9 @@ int send_register_info(write_fn write_fn, void *uc)
 int recv_and_compare_register_info(read_fn read_fn,
                                    respond_fn resp_fn, void *uc)
 {
-    int resp = 0, op;
+    int resp = 0;
     trace_header_t header;
+    RisuOp op;
 
     reginfo_init(&master_ri, uc);
     op = get_risuop(&master_ri);
@@ -97,7 +101,7 @@ int recv_and_compare_register_info(read_fn read_fn,
     switch (op) {
     case OP_COMPARE:
     case OP_TESTEND:
-    default:
+    case OP_SIGILL:
         /* Do a simple register compare on (a) explicit request
          * (b) end of test (c) a non-risuop UNDEF
          */
@@ -130,6 +134,8 @@ int recv_and_compare_register_info(read_fn read_fn,
         }
         resp_fn(resp);
         break;
+    default:
+        abort();
     }
 
     return resp;

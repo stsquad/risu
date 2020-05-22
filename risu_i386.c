@@ -38,12 +38,12 @@ uint64_t get_reginfo_paramreg(struct reginfo *ri)
     return ri->gregs[REG_E(AX)];
 }
 
-int get_risuop(struct reginfo *ri)
+RisuOp get_risuop(struct reginfo *ri)
 {
     if ((ri->faulting_insn & 0xf8ffff) == 0xc0b90f) { /* UD1 %xxx,%eax */
         return (ri->faulting_insn >> 16) & 7;
     }
-    return -1;
+    return OP_SIGILL;
 }
 
 uintptr_t get_pc(struct reginfo *ri)
