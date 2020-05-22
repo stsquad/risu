@@ -484,23 +484,101 @@ static int apprentice(void)
     }
 }
 
-static int ismaster;
+static int dump_trace(bool isfull)
+{
+    RisuResult res;
+    int tick = 0;
+
+    while (1) {
+        struct reginfo *this_ri;
+
+        this_ri = &ri[tick & 1];
+        res = recv_register_info(this_ri);
+
+        switch (res) {
+        case RES_OK:
+            switch (header.risu_op) {
+            case OP_COMPARE:
+            case OP_TESTEND:
+            case OP_SIGILL:
+                printf("%s: (pc %#lx)\n", op_name(header.risu_op),
+                       (unsigned long)header.pc);
+
+                if (isfull || tick == 0) {
+                    reginfo_dump(this_ri, stdout);
+                } else {
+                    struct reginfo *prev_ri = &ri[(tick - 1) & 1];
+
+                    if (reginfo_is_eq(prev_ri, this_ri)) {
+                        /*
+                         * ??? There should never be no change -- at minimum
+                         * PC should have advanced.  But for completeness...
+                         */
+                        printf("change detail: none\n");
+                    } else {
+                        printf("change detail (prev : next):\n");
+                        reginfo_dump_mismatch(prev_ri, this_ri, stdout);
+                    }
+                }
+                putchar('\n');
+                if (header.risu_op == OP_TESTEND) {
+                    return EXIT_SUCCESS;
+                }
+                tick++;
+                break;
+
+            case OP_COMPAREMEM:
+                /* TODO: Dump 8k of data? */
+                /* fall through */
+            default:
+                printf("%s\n", op_name(header.risu_op));
+                break;
+            }
+            break;
+
+        case RES_BAD_IO:
+            fprintf(stderr, "I/O error\n");
+            return EXIT_FAILURE;
+        case RES_BAD_MAGIC:
+            fprintf(stderr, "Unexpected magic number: %#08x\n", header.magic);
+            return EXIT_FAILURE;
+        case RES_BAD_SIZE:
+            fprintf(stderr, "Unexpected payload size: %u\n", header.size);
+            return EXIT_FAILURE;
+        case RES_BAD_OP:
+            fprintf(stderr, "Unexpected opcode: %d\n", header.risu_op);
+            return EXIT_FAILURE;
+        default:
+            fprintf(stderr, "Unexpected recv result %d\n", res);
+            return EXIT_FAILURE;
+        }
+    }
+}
+
+enum {
+    DO_APPRENTICE,
+    DO_MASTER,
+    DO_FULLDUMP,
+    DO_DIFFDUMP,
+};
+
+static int operation = DO_APPRENTICE;
 
 static void usage(void)
 {
     fprintf(stderr,
-            "Usage: risu [--master] [--host <ip>] [--port <port>] <image file>"
-            "\n\n");
-    fprintf(stderr,
-            "Run through the pattern file verifying each instruction\n");
-    fprintf(stderr, "between master and apprentice risu processes.\n\n");
-    fprintf(stderr, "Options:\n");
-    fprintf(stderr, "  --master          Be the master (server)\n");
-    fprintf(stderr, "  -t, --trace=FILE  Record/playback " TRACE_TYPE " trace file\n");
-    fprintf(stderr,
-            "  -h, --host=HOST   Specify master host machine (apprentice only)"
-            "\n");
-    fprintf(stderr,
+            "Usage: risu [--master|--fulldump|--diffdump]\n"
+            "            [--host <ip>] [--port <port>] <image file>\n"
+            "\n"
+            "Run through the pattern file verifying each instruction\n"
+            "between master and apprentice risu processes.\n"
+            "\n"
+            "Options:\n"
+            "  --master          Be the master (server)\n"
+            "  --fulldump        Dump each record\n"
+            "  --diffdump        Dump difference between each record\n"
+            "  -t, --trace=FILE  Record/playback " TRACE_TYPE " trace file\n"
+            "  -h, --host=HOST   Specify master host machine\n"
             "  -p, --port=PORT   Specify the port to connect to/listen on "
             "(default 9191)\n");
     if (arch_extra_help) {
@@ -512,7 +590,9 @@ static struct option * setup_options(char **short_opts)
 {
     static struct option default_longopts[] = {
         {"help", no_argument, 0, '?'},
-        {"master", no_argument, &ismaster, 1},
+        {"master", no_argument, &operation, DO_MASTER},
+        {"fulldump", no_argument, &operation, DO_FULLDUMP},
+        {"diffdump", no_argument, &operation, DO_DIFFDUMP},
         {"host", required_argument, 0, 'h'},
         {"port", required_argument, 0, 'p'},
         {"trace", required_argument, 0, 't'},
@@ -520,7 +600,7 @@ static struct option * setup_options(char **short_opts)
     };
     struct option *lopts = &default_longopts[0];
 
-    *short_opts = "h:p:t:";
+    *short_opts = "d:h:p:t:";
 
     if (arch_long_opts) {
         const size_t osize = sizeof(struct option);
@@ -551,6 +631,7 @@ int main(int argc, char **argv)
     char *trace_fn = NULL;
     struct option *longopts;
     char *shortopts;
+    bool ismaster;
 
     longopts = setup_options(&shortopts);
 
@@ -586,6 +667,8 @@ int main(int argc, char **argv)
         }
     }
 
+    ismaster = operation == DO_MASTER;
+
     if (trace) {
         if (strcmp(trace_fn, "-") == 0) {
             comm_fd = ismaster ? STDOUT_FILENO : STDIN_FILENO;
@@ -607,6 +690,10 @@ int main(int argc, char **argv)
             fprintf(stderr, "apprentice host %s port %d\n", hostname, port);
             comm_fd = apprentice_connect(hostname, port);
         }
+    }
+
+    if (operation == DO_FULLDUMP || operation == DO_DIFFDUMP) {
+        return dump_trace(operation == DO_FULLDUMP);
     }
 
     imgfile = argv[optind];
