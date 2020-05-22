@@ -14,9 +14,8 @@
 #include <stdlib.h>
 #include "risu.h"
 
-struct reginfo master_ri, apprentice_ri;
-
-uint8_t apprentice_memblock[MEMBLOCKLEN];
+static struct reginfo master_ri, apprentice_ri;
+static uint8_t master_memblock[MEMBLOCKLEN];
 
 static int mem_used;
 static int packet_mismatch;
@@ -82,8 +81,8 @@ RisuResult recv_and_compare_register_info(void *uc)
     trace_header_t header;
     RisuOp op;
 
-    reginfo_init(&master_ri, uc);
-    op = get_risuop(&master_ri);
+    reginfo_init(&apprentice_ri, uc);
+    op = get_risuop(&apprentice_ri);
 
     res = read_buffer(&header, sizeof(header));
     if (res != RES_OK) {
@@ -107,7 +106,7 @@ RisuResult recv_and_compare_register_info(void *uc)
         /* Do a simple register compare on (a) explicit request
          * (b) end of test (c) a non-risuop UNDEF
          */
-        res = read_buffer(&apprentice_ri, reginfo_size());
+        res = read_buffer(&master_ri, reginfo_size());
         if (res != RES_OK) {
             packet_mismatch = 1;
         } else if (!reginfo_is_eq(&master_ri, &apprentice_ri)) {
@@ -119,18 +118,18 @@ RisuResult recv_and_compare_register_info(void *uc)
         respond(res);
         break;
     case OP_SETMEMBLOCK:
-        memblock = (void *)(uintptr_t)get_reginfo_paramreg(&master_ri);
+        memblock = (void *)(uintptr_t)get_reginfo_paramreg(&apprentice_ri);
         break;
     case OP_GETMEMBLOCK:
-        set_ucontext_paramreg(uc, get_reginfo_paramreg(&master_ri) +
+        set_ucontext_paramreg(uc, get_reginfo_paramreg(&apprentice_ri) +
                               (uintptr_t)memblock);
         break;
     case OP_COMPAREMEM:
         mem_used = 1;
-        res = read_buffer(apprentice_memblock, MEMBLOCKLEN);
+        res = read_buffer(master_memblock, MEMBLOCKLEN);
         if (res != RES_OK) {
             packet_mismatch = 1;
-        } else if (memcmp(memblock, apprentice_memblock, MEMBLOCKLEN) != 0) {
+        } else if (memcmp(memblock, master_memblock, MEMBLOCKLEN) != 0) {
             /* memory mismatch */
             res = RES_MISMATCH;
         }
@@ -149,18 +148,13 @@ RisuResult recv_and_compare_register_info(void *uc)
  * Should return 0 if it was a good match (ie end of test)
  * and 1 for a mismatch.
  */
-int report_match_status(bool trace)
+int report_match_status(void)
 {
     int resp = 0;
     fprintf(stderr, "match status...\n");
     if (packet_mismatch) {
         fprintf(stderr, "packet mismatch (probably disagreement "
                 "about UNDEF on load/store)\n");
-        /* We don't have valid reginfo from the apprentice side
-         * so stop now rather than printing anything about it.
-         */
-        fprintf(stderr, "%s reginfo:\n", trace ? "this" : "master");
-        reginfo_dump(&master_ri, stderr);
         return 1;
     }
     if (!reginfo_is_eq(&master_ri, &apprentice_ri)) {
@@ -168,7 +162,7 @@ int report_match_status(bool trace)
         resp = 1;
     }
     if (mem_used
-        && memcmp(memblock, &apprentice_memblock, MEMBLOCKLEN) != 0) {
+        && memcmp(memblock, &master_memblock, MEMBLOCKLEN) != 0) {
         fprintf(stderr, "mismatch on memory!\n");
         resp = 1;
     }
@@ -177,15 +171,11 @@ int report_match_status(bool trace)
         return 0;
     }
 
-    fprintf(stderr, "%s reginfo:\n", trace ? "this" : "master");
+    fprintf(stderr, "master reginfo:\n");
     reginfo_dump(&master_ri, stderr);
-    fprintf(stderr, "%s reginfo:\n", trace ? "trace" : "apprentice");
+    fprintf(stderr, "apprentice reginfo:\n");
     reginfo_dump(&apprentice_ri, stderr);
 
-    if (trace) {
-        reginfo_dump_mismatch(&apprentice_ri, &master_ri, stderr);
-    } else {
-        reginfo_dump_mismatch(&master_ri, &apprentice_ri, stderr);
-    }
+    reginfo_dump_mismatch(&master_ri, &apprentice_ri, stderr);
     return resp;
 }

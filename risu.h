@@ -106,7 +106,7 @@ RisuResult recv_and_compare_register_info(void *uc);
  * Should return 0 if it was a good match (ie end of test)
  * and 1 for a mismatch.
  */
-int report_match_status(bool trace);
+int report_match_status(void);
 
 /* Interface provided by CPU-specific code: */
 

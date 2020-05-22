@@ -102,11 +102,7 @@ static void master_sigill(int sig, siginfo_t *si, void *uc)
     RisuResult r;
     signal_count++;
 
-    if (trace) {
-        r = send_register_info(uc);
-    } else {
-        r = recv_and_compare_register_info(uc);
-    }
+    r = send_register_info(uc);
     if (r == RES_OK) {
         advance_pc(uc);
     } else {
@@ -119,11 +115,7 @@ static void apprentice_sigill(int sig, siginfo_t *si, void *uc)
     RisuResult r;
     signal_count++;
 
-    if (trace) {
-        r = recv_and_compare_register_info(uc);
-    } else {
-        r = send_register_info(uc);
-    }
+    r = recv_and_compare_register_info(uc);
     if (r == RES_OK) {
         advance_pc(uc);
     } else {
@@ -186,61 +178,65 @@ static int master(void)
 {
     RisuResult res = sigsetjmp(jmpbuf, 1);
 
-    if (res != RES_OK) {
+    switch (res) {
+    case RES_OK:
+        set_sigill_handler(&master_sigill);
+        fprintf(stderr, "starting master image at 0x%"PRIxPTR"\n",
+                image_start_address);
+        fprintf(stderr, "starting image\n");
+        image_start();
+        fprintf(stderr, "image returned unexpectedly\n");
+        return EXIT_FAILURE;
+
+    case RES_END:
 #ifdef HAVE_ZLIB
         if (trace && comm_fd != STDOUT_FILENO) {
             gzclose(gz_trace_file);
         }
 #endif
         close(comm_fd);
-        if (trace) {
-            fprintf(stderr, "trace complete after %zd checkpoints\n",
-                    signal_count);
-            return EXIT_SUCCESS;
-        } else {
-            return report_match_status(false);
-        }
+        return EXIT_SUCCESS;
+
+    case RES_BAD_IO:
+        fprintf(stderr, "i/o error after %zd checkpoints\n", signal_count);
+        return EXIT_FAILURE;
+
+    default:
+        fprintf(stderr, "unexpected result %d\n", res);
+        return EXIT_FAILURE;
     }
-    set_sigill_handler(&master_sigill);
-    fprintf(stderr, "starting master image at 0x%"PRIxPTR"\n",
-            image_start_address);
-    fprintf(stderr, "starting image\n");
-    image_start();
-    fprintf(stderr, "image returned unexpectedly\n");
-    return EXIT_FAILURE;
 }
 
 static int apprentice(void)
 {
     RisuResult res = sigsetjmp(jmpbuf, 1);
 
-    if (res != RES_OK) {
-#ifdef HAVE_ZLIB
-        if (trace && comm_fd != STDIN_FILENO) {
-            gzclose(gz_trace_file);
-        }
-#endif
-        close(comm_fd);
+    switch (res) {
+    case RES_OK:
+        set_sigill_handler(&apprentice_sigill);
+        fprintf(stderr, "starting apprentice image at 0x%"PRIxPTR"\n",
+                image_start_address);
+        fprintf(stderr, "starting image\n");
+        image_start();
+        fprintf(stderr, "image returned unexpectedly\n");
+        return EXIT_FAILURE;
 
-        switch (res) {
-        case RES_END:
-            return EXIT_SUCCESS;
-        default:
-            if (!trace) {
-                return EXIT_FAILURE;
-            }
-            fprintf(stderr, "finished early after %zd checkpoints\n",
-                    signal_count);
-            return report_match_status(true);
-        }
+    case RES_END:
+        return EXIT_SUCCESS;
+
+    case RES_MISMATCH:
+        fprintf(stderr, "mismatch after %zd checkpoints\n", signal_count);
+        report_match_status();
+        return EXIT_FAILURE;
+
+    case RES_BAD_IO:
+        fprintf(stderr, "i/o error after %zd checkpoints\n", signal_count);
+        return EXIT_FAILURE;
+
+    default:
+        fprintf(stderr, "unexpected result %d\n", res);
+        return EXIT_FAILURE;
     }
-    set_sigill_handler(&apprentice_sigill);
-    fprintf(stderr, "starting apprentice image at 0x%"PRIxPTR"\n",
-            image_start_address);
-    fprintf(stderr, "starting image\n");
-    image_start();
-    fprintf(stderr, "image returned unexpectedly\n");
-    return EXIT_FAILURE;
 }
 
 static int ismaster;
