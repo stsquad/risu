@@ -28,10 +28,16 @@
 #include "config.h"
 #include "risu.h"
 
-static void *memblock;
-static struct reginfo master_ri, apprentice_ri;
-static uint8_t master_memblock[MEMBLOCKLEN];
+enum {
+    MASTER = 0, APPRENTICE = 1
+};
 
+static struct reginfo ri[2];
+static uint8_t other_memblock[MEMBLOCKLEN];
+static trace_header_t header;
+
+/* Memblock pointer into the execution image. */
+static void *memblock;
 
 static int comm_fd;
 static bool trace;
@@ -102,16 +108,15 @@ static void respond(RisuResult r)
 
 static RisuResult send_register_info(void *uc)
 {
-    struct reginfo ri;
-    trace_header_t header;
+    uint64_t paramreg;
     RisuResult res;
     RisuOp op;
 
-    reginfo_init(&ri, uc);
-    op = get_risuop(&ri);
+    reginfo_init(&ri[MASTER], uc);
+    op = get_risuop(&ri[MASTER]);
 
     /* Write a header with PC/op to keep in sync */
-    header.pc = get_pc(&ri);
+    header.pc = get_pc(&ri[MASTER]);
     header.risu_op = op;
     res = write_buffer(&header, sizeof(header));
     if (res != RES_OK) {
@@ -126,18 +131,19 @@ static RisuResult send_register_info(void *uc)
          * Do a simple register compare on (a) explicit request
          * (b) end of test (c) a non-risuop UNDEF
          */
-        res = write_buffer(&ri, reginfo_size());
+        res = write_buffer(&ri[MASTER], reginfo_size());
         /* For OP_TEST_END, force exit. */
         if (res == RES_OK && op == OP_TESTEND) {
             res = RES_END;
         }
         break;
     case OP_SETMEMBLOCK:
-        memblock = (void *)(uintptr_t)get_reginfo_paramreg(&ri);
+        paramreg = get_reginfo_paramreg(&ri[MASTER]);
+        memblock = (void *)(uintptr_t)paramreg;
         break;
     case OP_GETMEMBLOCK:
-        set_ucontext_paramreg(uc,
-                              get_reginfo_paramreg(&ri) + (uintptr_t)memblock);
+        paramreg = get_reginfo_paramreg(&ri[MASTER]);
+        set_ucontext_paramreg(uc, paramreg + (uintptr_t)memblock);
         break;
     case OP_COMPAREMEM:
         return write_buffer(memblock, MEMBLOCKLEN);
@@ -162,12 +168,12 @@ static void master_sigill(int sig, siginfo_t *si, void *uc)
 
 static RisuResult recv_and_compare_register_info(void *uc)
 {
+    uint64_t paramreg;
     RisuResult res;
-    trace_header_t header;
     RisuOp op;
 
-    reginfo_init(&apprentice_ri, uc);
-    op = get_risuop(&apprentice_ri);
+    reginfo_init(&ri[APPRENTICE], uc);
+    op = get_risuop(&ri[APPRENTICE]);
 
     res = read_buffer(&header, sizeof(header));
     if (res != RES_OK) {
@@ -190,10 +196,10 @@ static RisuResult recv_and_compare_register_info(void *uc)
         /* Do a simple register compare on (a) explicit request
          * (b) end of test (c) a non-risuop UNDEF
          */
-        res = read_buffer(&master_ri, reginfo_size());
+        res = read_buffer(&ri[MASTER], reginfo_size());
         if (res != RES_OK) {
             /* fail */
-        } else if (!reginfo_is_eq(&master_ri, &apprentice_ri)) {
+        } else if (!reginfo_is_eq(&ri[MASTER], &ri[APPRENTICE])) {
             /* register mismatch */
             res = RES_MISMATCH_REG;
         } else if (op == OP_TESTEND) {
@@ -202,17 +208,18 @@ static RisuResult recv_and_compare_register_info(void *uc)
         respond(res == RES_OK ? RES_OK : RES_END);
         break;
     case OP_SETMEMBLOCK:
-        memblock = (void *)(uintptr_t)get_reginfo_paramreg(&apprentice_ri);
+        paramreg = get_reginfo_paramreg(&ri[APPRENTICE]);
+        memblock = (void *)(uintptr_t)paramreg;
         break;
     case OP_GETMEMBLOCK:
-        set_ucontext_paramreg(uc, get_reginfo_paramreg(&apprentice_ri) +
-                              (uintptr_t)memblock);
+        paramreg = get_reginfo_paramreg(&ri[APPRENTICE]);
+        set_ucontext_paramreg(uc, paramreg + (uintptr_t)memblock);
         break;
     case OP_COMPAREMEM:
-        res = read_buffer(master_memblock, MEMBLOCKLEN);
+        res = read_buffer(other_memblock, MEMBLOCKLEN);
         if (res != RES_OK) {
             /* fail */
-        } else if (memcmp(memblock, master_memblock, MEMBLOCKLEN) != 0) {
+        } else if (memcmp(memblock, other_memblock, MEMBLOCKLEN) != 0) {
             /* memory mismatch */
             res = RES_MISMATCH_MEM;
         }
@@ -221,7 +228,6 @@ static RisuResult recv_and_compare_register_info(void *uc)
     default:
         abort();
     }
-
     return res;
 }
 
@@ -342,10 +348,10 @@ static int apprentice(void)
     case RES_MISMATCH_REG:
         fprintf(stderr, "mismatch reg after %zd checkpoints\n", signal_count);
         fprintf(stderr, "master reginfo:\n");
-        reginfo_dump(&master_ri, stderr);
+        reginfo_dump(&ri[MASTER], stderr);
         fprintf(stderr, "apprentice reginfo:\n");
-        reginfo_dump(&apprentice_ri, stderr);
-        reginfo_dump_mismatch(&master_ri, &apprentice_ri, stderr);
+        reginfo_dump(&ri[APPRENTICE], stderr);
+        reginfo_dump_mismatch(&ri[MASTER], &ri[APPRENTICE], stderr);
         return EXIT_FAILURE;
 
     case RES_MISMATCH_MEM:
