@@ -617,6 +617,9 @@ int main(int argc, char **argv)
 
     load_image(imgfile);
 
+    /* E.g. select requested SVE vector length. */
+    arch_init();
+
     if (ismaster) {
         return master();
     } else {
