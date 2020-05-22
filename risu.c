@@ -107,15 +107,10 @@ static void master_sigill(int sig, siginfo_t *si, void *uc)
     } else {
         r = recv_and_compare_register_info(uc);
     }
-
-    switch (r) {
-    case RES_OK:
-        /* match OK */
+    if (r == RES_OK) {
         advance_pc(uc);
-        return;
-    default:
-        /* mismatch, or end of test */
-        siglongjmp(jmpbuf, 1);
+    } else {
+        siglongjmp(jmpbuf, r);
     }
 }
 
@@ -129,21 +124,10 @@ static void apprentice_sigill(int sig, siginfo_t *si, void *uc)
     } else {
         r = send_register_info(uc);
     }
-
-    switch (r) {
-    case RES_OK:
-        /* match OK */
+    if (r == RES_OK) {
         advance_pc(uc);
-        return;
-    case RES_END:
-        /* end of test */
-        exit(EXIT_SUCCESS);
-    default:
-        /* mismatch */
-        if (trace) {
-            siglongjmp(jmpbuf, 1);
-        }
-        exit(EXIT_FAILURE);
+    } else {
+        siglongjmp(jmpbuf, r);
     }
 }
 
@@ -200,7 +184,9 @@ static void load_image(const char *imgfile)
 
 static int master(void)
 {
-    if (sigsetjmp(jmpbuf, 1)) {
+    RisuResult res = sigsetjmp(jmpbuf, 1);
+
+    if (res != RES_OK) {
 #ifdef HAVE_ZLIB
         if (trace && comm_fd != STDOUT_FILENO) {
             gzclose(gz_trace_file);
@@ -226,15 +212,27 @@ static int master(void)
 
 static int apprentice(void)
 {
-    if (sigsetjmp(jmpbuf, 1)) {
+    RisuResult res = sigsetjmp(jmpbuf, 1);
+
+    if (res != RES_OK) {
 #ifdef HAVE_ZLIB
         if (trace && comm_fd != STDIN_FILENO) {
             gzclose(gz_trace_file);
         }
 #endif
         close(comm_fd);
-        fprintf(stderr, "finished early after %zd checkpoints\n", signal_count);
-        return report_match_status(true);
+
+        switch (res) {
+        case RES_END:
+            return EXIT_SUCCESS;
+        default:
+            if (!trace) {
+                return EXIT_FAILURE;
+            }
+            fprintf(stderr, "finished early after %zd checkpoints\n",
+                    signal_count);
+            return report_match_status(true);
+        }
     }
     set_sigill_handler(&apprentice_sigill);
     fprintf(stderr, "starting apprentice image at 0x%"PRIxPTR"\n",
