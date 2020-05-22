@@ -55,7 +55,11 @@ typedef enum {
     RES_END,
     RES_MISMATCH_REG,
     RES_MISMATCH_MEM,
+    RES_MISMATCH_OP,
     RES_BAD_IO,
+    RES_BAD_MAGIC,
+    RES_BAD_SIZE,
+    RES_BAD_OP,
 } RisuResult;
 
 /* The memory block should be this long */
@@ -69,9 +73,13 @@ typedef enum {
 struct reginfo;
 
 typedef struct {
-   uintptr_t pc;
+   uint32_t magic;
+   uint32_t size;
    uint32_t risu_op;
+   uintptr_t pc;
 } trace_header_t;
+
+#define RISU_MAGIC  (('R' << 24) | ('I' << 16) | ('S' << 8) | 'U')
 
 /* Socket related routines */
 int master_connect(int port);
