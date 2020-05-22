@@ -224,9 +224,13 @@ static int apprentice(void)
     case RES_END:
         return EXIT_SUCCESS;
 
-    case RES_MISMATCH:
-        fprintf(stderr, "mismatch after %zd checkpoints\n", signal_count);
-        report_match_status();
+    case RES_MISMATCH_REG:
+        fprintf(stderr, "mismatch reg after %zd checkpoints\n", signal_count);
+        report_mismatch_reg();
+        return EXIT_FAILURE;
+
+    case RES_MISMATCH_MEM:
+        fprintf(stderr, "mismatch mem after %zd checkpoints\n", signal_count);
         return EXIT_FAILURE;
 
     case RES_BAD_IO:

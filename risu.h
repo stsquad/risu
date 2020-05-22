@@ -54,7 +54,8 @@ typedef enum {
 typedef enum {
     RES_OK = 0,
     RES_END,
-    RES_MISMATCH,
+    RES_MISMATCH_REG,
+    RES_MISMATCH_MEM,
     RES_BAD_IO,
 } RisuResult;
 
@@ -100,13 +101,11 @@ RisuResult send_register_info(void *uc);
  */
 RisuResult recv_and_compare_register_info(void *uc);
 
-/* Print a useful report on the status of the last comparison
- * done in recv_and_compare_register_info(). This is called on
- * exit, so need not restrict itself to signal-safe functions.
- * Should return 0 if it was a good match (ie end of test)
- * and 1 for a mismatch.
+/*
+ * Print a useful report on the status of the last reg comparison
+ * done in recv_and_compare_register_info().
  */
-int report_match_status(void);
+void report_mismatch_reg(void);
 
 /* Interface provided by CPU-specific code: */
 

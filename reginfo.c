@@ -17,9 +17,6 @@
 static struct reginfo master_ri, apprentice_ri;
 static uint8_t master_memblock[MEMBLOCKLEN];
 
-static int mem_used;
-static int packet_mismatch;
-
 RisuResult send_register_info(void *uc)
 {
     struct reginfo ri;
@@ -107,10 +104,10 @@ RisuResult recv_and_compare_register_info(void *uc)
          */
         res = read_buffer(&master_ri, reginfo_size());
         if (res != RES_OK) {
-            packet_mismatch = 1;
+            /* fail */
         } else if (!reginfo_is_eq(&master_ri, &apprentice_ri)) {
             /* register mismatch */
-            res = RES_MISMATCH;
+            res = RES_MISMATCH_REG;
         } else if (op == OP_TESTEND) {
             res = RES_END;
         }
@@ -124,13 +121,12 @@ RisuResult recv_and_compare_register_info(void *uc)
                               (uintptr_t)memblock);
         break;
     case OP_COMPAREMEM:
-        mem_used = 1;
         res = read_buffer(master_memblock, MEMBLOCKLEN);
         if (res != RES_OK) {
-            packet_mismatch = 1;
+            /* fail */
         } else if (memcmp(memblock, master_memblock, MEMBLOCKLEN) != 0) {
             /* memory mismatch */
-            res = RES_MISMATCH;
+            res = RES_MISMATCH_MEM;
         }
         respond(res == RES_OK ? RES_OK : RES_END);
         break;
@@ -141,40 +137,15 @@ RisuResult recv_and_compare_register_info(void *uc)
     return res;
 }
 
-/* Print a useful report on the status of the last comparison
- * done in recv_and_compare_register_info(). This is called on
- * exit, so need not restrict itself to signal-safe functions.
- * Should return 0 if it was a good match (ie end of test)
- * and 1 for a mismatch.
+/*
+ * Print a useful report on the status of the last reg comparison
+ * done in recv_and_compare_register_info().
  */
-int report_match_status(void)
+void report_mismatch_reg(void)
 {
-    int resp = 0;
-    fprintf(stderr, "match status...\n");
-    if (packet_mismatch) {
-        fprintf(stderr, "packet mismatch (probably disagreement "
-                "about UNDEF on load/store)\n");
-        return 1;
-    }
-    if (!reginfo_is_eq(&master_ri, &apprentice_ri)) {
-        fprintf(stderr, "mismatch on regs!\n");
-        resp = 1;
-    }
-    if (mem_used
-        && memcmp(memblock, &master_memblock, MEMBLOCKLEN) != 0) {
-        fprintf(stderr, "mismatch on memory!\n");
-        resp = 1;
-    }
-    if (!resp) {
-        fprintf(stderr, "match!\n");
-        return 0;
-    }
-
     fprintf(stderr, "master reginfo:\n");
     reginfo_dump(&master_ri, stderr);
     fprintf(stderr, "apprentice reginfo:\n");
     reginfo_dump(&apprentice_ri, stderr);
-
     reginfo_dump_mismatch(&master_ri, &apprentice_ri, stderr);
-    return resp;
 }
